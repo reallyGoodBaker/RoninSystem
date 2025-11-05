@@ -1,0 +1,1 @@
+export type Constructor<Inst, Args extends Array<any> = any[]> = new (...args: Args) => Inst

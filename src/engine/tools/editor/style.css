@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+    --font-sans: Noto Sans SC, sans-serif;
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: Roboto Mono, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}

@@ -1,0 +1,40 @@
+{
+    "name": "ronin-system",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "build": "rollup -c",
+        "watch": "rollup -c -w",
+        "build-editor": "rollup -c ./editor.config.js && npx @tailwindcss/cli -i ./src/engine/tools/editor/style.css -o ./dist/editor/style.css",
+        "editor": "npm run build-editor && node ./dist/editor/server.cjs"
+    },
+    "author": "RGB39",
+    "license": "GPL-3.0-only",
+    "description": "",
+    "devDependencies": {
+        "@minecraft/server": "^2.3.0-beta.1.21.111-stable",
+        "@minecraft/server-ui": "^2.0.0",
+        "@rollup/plugin-json": "^6.1.0",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-terser": "^0.4.4",
+        "@rollup/plugin-typescript": "^12.1.4",
+        "@types/sockjs": "^0.3.36",
+        "rollup": "^4.52.5",
+        "rollup-plugin-typescript-paths": "^1.5.0",
+        "tailwindcss": "^4.1.16",
+        "tsconfig-replace-paths": "^0.0.14",
+        "tslib": "^2.8.1",
+        "typescript": "^5.9.2"
+    },
+    "dependencies": {
+        "@minecraft/math": "^2.2.8",
+        "@rollup/plugin-commonjs": "^28.0.6",
+        "@tailwindcss/cli": "^4.1.16",
+        "@types/ws": "^8.18.1",
+        "reflect-metadata": "^0.2.2",
+        "sockjs": "^0.3.24",
+        "typedi": "^0.10.0",
+        "ws": "^8.18.3"
+    }
+}

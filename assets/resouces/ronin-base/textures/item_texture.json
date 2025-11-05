@@ -1,0 +1,27 @@
+{
+	"resource_pack_name": "Ronin System",
+	"texture_name": "atlas.items",
+	"texture_data": {
+		"control.settings": {
+			"textures": "textures/control/setting"
+		},
+		"control.det.down": {
+			"textures": "textures/control/det_down"
+		},
+		"control.det.up": {
+			"textures": "textures/control/det_up"
+		},
+		"control.detlvl.down": {
+			"textures": "textures/control/det_lvl_down"
+		},
+		"control.detlvl.up": {
+			"textures": "textures/control/det_lvl_up"
+		},
+		"control.mental.up": {
+			"textures": "textures/control/mental_up"
+		},
+		"control.mental.down": {
+			"textures": "textures/control/mental_down"
+		}
+	}
+}

@@ -1,0 +1,44 @@
+{
+	"format_version": 2,
+	"metadata": {
+		"authors": [
+			"rgb39"
+		]
+	},
+	"header": {
+		"name": "Ronin System",
+		"description": "战斗系统",
+		"min_engine_version": [
+			1,
+			21,
+			90
+		],
+		"uuid": "ff807b47-d08d-4285-a627-f824d0ae1c48",
+		"version": [
+			1,
+			0,
+			0
+		]
+	},
+	"modules": [
+		{
+			"type": "resources",
+			"uuid": "10c89c46-6570-4fb6-9838-e68d1dbcbaa7",
+			"version": [
+				1,
+				0,
+				0
+			]
+		}
+	],
+	"dependencies": [
+		{
+			"uuid": "a497693c-5f35-4124-bfa0-93c473813809",
+			"version": [
+				1,
+				0,
+				0
+			]
+		}
+	]
+}

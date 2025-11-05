@@ -1,0 +1,1055 @@
+{
+    "hud_title_text/title_frame/title": {
+        "modifications": [
+            {
+                "array_name": "bindings",
+                "operation": "insert_back",
+                "value": [
+                    {
+                        "binding_type": "view",
+                        "source_property_name": "(not (%.7s * #text = 'ui.hud.'))",
+                        "target_property_name": "#visible"
+                    }
+                ]
+            }
+        ]
+    },
+    "hud_actionbar_text": {
+        "type": "image",
+        "size": [
+            "100%c + 12px",
+            "100%c + 5px"
+        ],
+        "offset": [
+            0,
+            "50%-68px"
+        ],
+        "texture": "textures/ui/hud_tip_text_background",
+        "alpha": "@hud.anim_actionbar_text_background_alpha_out",
+        "controls": [
+            {
+                "actionbar_message": {
+                    "type": "label",
+                    "anchor_from": "center",
+                    "anchor_to": "center",
+                    "color": "$tool_tip_text",
+                    "layer": 31,
+                    "text": "$actionbar_text",
+                    "localize": false,
+                    "alpha": "@hud.anim_actionbar_text_alpha_out"
+                }
+            }
+        ]
+    },
+    "hud_content": {
+        "modifications": [
+            {
+                "array_name": "controls",
+                "operation": "insert_front",
+                "value": [
+                    {
+                        "data_control": {
+                            "type": "panel",
+                            "property_bag": {
+                                "#title_text": ""
+                            },
+                            "bindings": [
+                                {
+                                    "binding_name": "#hud_title_text_string"
+                                },
+                                {
+                                    "binding_name": "#hud_title_text_string",
+                                    "binding_name_override": "#title_text",
+                                    "binding_condition": "visibility_changed"
+                                },
+                                {
+                                    "binding_type": "view",
+                                    "source_property_name": "((not (#hud_title_text_string = #title_text)) and ((%.19s * #title_text) = 'ui.hud.det.progress')))",
+                                    "target_property_name": "#visible"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    // "root_panel": {
+    //     "modifications": [
+    //         {
+    //             "array_name": "controls",
+    //             "operation": "insert_front",
+    //             "value": [
+    //                 {
+    //                     "@det_progress": {}
+    //                 }
+    //             ]
+    //         }
+    //     ]
+    // },
+    "det_track": {
+        "type": "panel",
+        "controls": [
+            {
+                "track_sane": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 0,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        0
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        100,
+                        4
+                    ],
+                    "color": [
+                        0,
+                        1,
+                        1
+                    ]
+                }
+            },
+            {
+                "track_neutral": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 0,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        0
+                    ],
+                    "uv_size": [
+                        50,
+                        5
+                    ],
+                    "size": [
+                        50,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        0.8,
+                        0
+                    ]
+                }
+            },
+            {
+                "track_insane": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 0,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        0
+                    ],
+                    "uv_size": [
+                        30,
+                        5
+                    ],
+                    "size": [
+                        30,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        0,
+                        0
+                    ]
+                }
+            }
+        ]
+    },
+    "det_progress": {
+        "type": "panel",
+        "offset": [
+            10,
+            -10
+        ],
+        "size": [
+            100,
+            4
+        ],
+        "anchor_from": "bottom_left",
+        "anchor_to": "bottom_left",
+        "controls": [
+            {
+                "@det_track": {}
+            },
+            {
+                "bar_0": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        0,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.0')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_1": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        5,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.1')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_2": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        10,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.2')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_3": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        15,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.3')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_4": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        20,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.4')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_5": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        25,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.5')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_6": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        30,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.6')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_7": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        35,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.7')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_8": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        40,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.8')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_9": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        45,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.9')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_10": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        50,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.10')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_11": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        55,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.11')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_12": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        60,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.12')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_13": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        65,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.13')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_14": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        70,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.14')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_15": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        75,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.15')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_16": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        80,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.16')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_17": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        85,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.17')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_18": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        90,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.18')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_19": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        95,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.19')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            },
+            {
+                "bar_20": {
+                    "type": "image",
+                    "texture": "textures/ui/progress_grayscaled",
+                    "layer": 1,
+                    "anchor_from": "bottom_left",
+                    "anchor_to": "bottom_left",
+                    "keep_ratio": false,
+                    "uv": [
+                        0,
+                        5
+                    ],
+                    "uv_size": [
+                        182,
+                        5
+                    ],
+                    "size": [
+                        100,
+                        4
+                    ],
+                    "color": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "clips_children": true,
+                    "bindings": [
+                        {
+                            "binding_type": "view",
+                            "source_control_name": "data_control",
+                            "source_property_name": "#title_text",
+                            "target_property_name": "#text"
+                        },
+                        {
+                            "binding_type": "view",
+                            "source_property_name": "(#text = 'ui.hud.det.progress.20')",
+                            "target_property_name": "#visible"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

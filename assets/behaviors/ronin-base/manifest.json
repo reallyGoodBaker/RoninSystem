@@ -1,0 +1,54 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "Ronin System",
+		"description": "战斗系统",
+		"min_engine_version": [
+			1,
+			21,
+			110
+		],
+		"uuid": "a497693c-5f35-4124-bfa0-93c473813809",
+		"version": [
+			1,
+			0,
+			0
+		]
+	},
+	"modules": [
+		{
+			"type": "data",
+			"uuid": "e6209760-1057-40db-a539-0c110eb560a9",
+			"version": [
+				1,
+				0,
+				0
+			]
+		},
+		{
+			"type": "script",
+			"uuid": "21cdf63e-0dd8-4096-900c-cba2ba2ee33a",
+			"language": "javascript",
+			"version": [1,0,0],
+			"entry": "scripts/index.js"
+		}
+	],
+	"dependencies": [
+		{
+			"uuid": "ff807b47-d08d-4285-a627-f824d0ae1c48",
+			"version": [
+				1,
+				0,
+				0
+			]
+		},
+		{
+			"module_name": "@minecraft/server",
+			"version": "2.3.0-beta"
+		},
+		{
+			"module_name": "@minecraft/server-ui",
+			"version": "2.0.0"
+		}
+	]
+}

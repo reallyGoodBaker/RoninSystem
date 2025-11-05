@@ -1,0 +1,27 @@
+{
+    "format_version": "1.21.80",
+    "minecraft:crafting_items_catalog": {
+        "categories": [
+            {
+                "category_name": "items",
+                "groups": [
+                    {
+                        "group_identifier": {
+                            "icon": "ss:control.settings",
+                            "name": "ss:settings"
+                        },
+                        "items": [
+                            "ss:control.settings",
+                            "ss:control.det_down",
+                            "ss:control.det_up",
+                            "ss:control.detlvl_down",
+                            "ss:control.detlvl_up",
+                            "ss:control.mental_down",
+                            "ss:control.mental_up"
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

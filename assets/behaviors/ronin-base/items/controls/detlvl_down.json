@@ -1,0 +1,30 @@
+{
+    "format_version": "1.21.90",
+    "minecraft:item": {
+        "description": {
+            "identifier": "ss:control.detlvl_down",
+            "menu_category": {
+                "category": "items"
+            }
+        },
+        "components": {
+            "minecraft:can_destroy_in_creative": false,
+            "minecraft:icon": "control.detlvl.down",
+            "minecraft:max_stack_size": 1,
+            "minecraft:rarity": "epic",
+            "minecraft:tags": {
+                "tags": [
+                    "ss:control"
+                ]
+            },
+            "minecraft:display_name": {
+                "value": "ss:detlvl_down"
+            },
+            "minecraft:use_modifiers": {
+                "movement_modifier": 1,
+                "use_duration": 999999
+            },
+            "ss:chargeable": {}
+        }
+    }
+}

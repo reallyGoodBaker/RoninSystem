@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "module": "esnext", 
+        "rootDir": "./",
+        "moduleResolution": "bundler",
+    "baseUrl": "./src/engine/tools",
+    "paths": {
+        "@ronin/*": [
+            "../../engine/*"
+        ],
+        "@/*": [
+            "../../*"
+        ]
+    },
+        "allowJs": true,
+        "outDir": "./dist",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "skipLibCheck": true
+    }
+}

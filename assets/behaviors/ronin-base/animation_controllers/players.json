@@ -1,0 +1,55 @@
+{
+    "format_version": "1.21.0",
+    "animation_controllers": {
+        "controller.animation.player.attack": {
+            "initial_state": "idle",
+            "states": {
+                "idle": {
+                    "on_entry": [
+                        "/scriptevent ss:drawEnd"
+                    ],
+                    "transitions": [
+                        {
+                            "drawing": "v.attack_time > 0"
+                        }
+                    ]
+                },
+                "drawing": {
+                    "on_entry": [
+                        "/scriptevent ss:drawStart"
+                    ],
+                    "transitions": [
+                        {
+                            "idle": "v.attack_time < 0.3"
+                        }
+                    ]
+                }
+            }
+        },
+        "controller.animation.player.sprint": {
+            "initial_state": "idle",
+            "states": {
+                "idle": {
+                    "on_entry": [
+                        "/scriptevent ss:sprintEnd"
+                    ],
+                    "transitions": [
+                        {
+                            "running": "query.is_sprinting"
+                        }
+                    ]
+                },
+                "running": {
+                    "on_entry": [
+                        "/scriptevent ss:sprintStart"
+                    ],
+                    "transitions": [
+                        {
+                            "idle": "!query.is_sprinting"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
