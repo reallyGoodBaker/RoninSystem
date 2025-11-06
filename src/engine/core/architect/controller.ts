@@ -1,6 +1,6 @@
 import { Actor } from './actor'
 
-export interface IController {
+export interface IController extends Actor {
     possess(pawn: Possessable): void
     unPossess(): void
     getPawn<T extends Possessable = Possessable>(): T | undefined

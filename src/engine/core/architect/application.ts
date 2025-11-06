@@ -11,7 +11,7 @@ import { IWorld, WorldLocation } from './world'
 import { Resource, Resources } from './resorce'
 import { EventInstigator } from './event'
 import { Pawn } from './pawn'
-import { Controller, PlayerController } from './controller'
+import { IController, PlayerController } from './controller'
 import { profiler } from '../profiler'
 import { SpawnConfig } from '../config'
 import { AutoSpawns } from '@ronin/config/spawn'
@@ -147,6 +147,15 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
 
     readonly serverStarted = Promise.withResolvers<StartupEvent>()
     readonly playerControllers: PlayerController[] = []
+
+    getControllerByActorId<T extends IController>(id: string): T | undefined {
+        const pawn = this.getActor<Pawn>(id)
+        if (!pawn) {
+            return
+        }
+
+        return pawn.getController() as T
+    }
 
     enter = () => {
         if (this.initialized) return

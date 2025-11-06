@@ -1,6 +1,7 @@
 import { EntityEquippableComponent, EquipmentSlot, ItemStack, Player, world } from '@minecraft/server'
 import { Application } from '@ronin/core/architect/application'
 import { Component } from '@ronin/core/architect/component'
+import { PlayerController } from '@ronin/core/architect/controller'
 import { Pawn } from '@ronin/core/architect/pawn'
 
 export interface HotbarSkillOptions {
@@ -20,7 +21,7 @@ export interface HotbarSkillOptions {
 
 export type HotbarHandler = (player: Player, item: ItemStack, slot: number, previousSlot: number) => void
 
-export class HotbarSkillComponent extends Component {
+export class HotbarComponent extends Component {
     static {
         world.afterEvents.playerHotbarSelectedSlotChange.subscribe(({
             player,
@@ -28,16 +29,12 @@ export class HotbarSkillComponent extends Component {
             newSlotSelected,
             itemStack
         }) => {
-            if (!itemStack) {
+            const controller = Application.getInst().getControllerByActorId<PlayerController>(player.id)
+            if (!controller) {
                 return
             }
 
-            const actor = Application.getInst().getActor(player.id)
-            if (!actor) {
-                return
-            }
-
-            const hotbarSkill = actor.getComponent(HotbarSkillComponent)
+            const hotbarSkill = controller.getComponent(HotbarComponent)
             if (!hotbarSkill) {
                 return
             }
@@ -46,7 +43,13 @@ export class HotbarSkillComponent extends Component {
         })
     }
 
-    private _tryActivateSkill(player: Player, itemStack: ItemStack, newSlotSelected: number, previousSlotSelected: number) {
+    private _tryActivateSkill(player: Player, itemStack: ItemStack | undefined, newSlotSelected: number, previousSlotSelected: number) {
+        if (!itemStack) {
+            const handler = this._skillMapping.get('empty')
+            handler?.(player, itemStack as any, newSlotSelected, previousSlotSelected)
+            return
+        }
+
         const {
             itemOffhand,
             slot,
@@ -98,5 +101,22 @@ export class HotbarSkillComponent extends Component {
     unbindSkill(itemId: string) {
         this._skillMapping.delete(itemId)
         this._skillOptions.delete(itemId)
+    }
+
+    Builder = class HotbarComponentBuilder {
+        private readonly skills: [string, HotbarHandler, HotbarSkillOptions?][] = []
+
+        addSkill(itemId: string, skill: HotbarHandler, options: HotbarSkillOptions = {}) {
+            this.skills.push([itemId, skill, options])
+            return this
+        }
+
+        build(): HotbarComponent {
+            const component = new HotbarComponent()
+            for (const [itemId, skill, options] of this.skills) {
+                component.bindSkill(itemId, skill, options)
+            }
+            return component
+        }
     }
 }

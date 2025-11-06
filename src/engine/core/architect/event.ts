@@ -35,6 +35,9 @@ export class EventInstigator<M extends { [key in keyof M]: unknown[] } = {}> {
             eventLinked.delete(callback as any)
         }
     }
+
+    on = EventInstigator.prototype.addListener
+    off = EventInstigator.prototype.removeListener
 }
 
 /**
@@ -68,6 +71,9 @@ export abstract class EventComponent<M extends { [ K in keyof M]: M[K] } = {}, A
             eventLinked.delete(callback as any)
         }
     }
+
+    on = EventComponent.prototype.addListener
+    off = EventComponent.prototype.removeListener
 }
 
 /**
@@ -76,7 +82,7 @@ export abstract class EventComponent<M extends { [ K in keyof M]: M[K] } = {}, A
 export class EventSignal<A extends unknown[] = unknown[]> {
     private _observers: Array<(...args: A) => void> = []
 
-    on = (callback: (...args: A) => void) => {
+    addListener = (callback: (...args: A) => void) => {
         this._observers.push(callback)
     }
 
@@ -84,13 +90,16 @@ export class EventSignal<A extends unknown[] = unknown[]> {
      * 尽可能不使用 off，因为 off 性能较差
      * @param callback 
      */
-    off = (callback: (...args: A) => void) => {
+    removeListener = (callback: (...args: A) => void) => {
         this._observers.splice(this._observers.indexOf(callback), 1)
     }
 
-    notify = (...args: A) => {
+    trigger = (...args: A) => {
         this._observers.forEach(callback => callback.apply(undefined, args))
     }
+
+    on = EventSignal.prototype.addListener
+    off = EventSignal.prototype.removeListener
 }
 
 
@@ -98,7 +107,7 @@ export class EventSignal<A extends unknown[] = unknown[]> {
  * 一个事件委托，只能绑定一个回调函数
  */
 export class EventDelegate<A extends unknown[] = unknown[]> {
-    private onNotify_: (...args: A) => void = Function.prototype as any
+    private onNotify_?: (...args: A) => void
 
     bind = (callback: (...args: A) => void, thisArg: any) => {
         if (thisArg) {
@@ -110,6 +119,10 @@ export class EventDelegate<A extends unknown[] = unknown[]> {
     }
 
     call = (...args: A) => {
-        this.onNotify_.apply(undefined, args)
+        this.onNotify_?.apply(undefined, args)
+    }
+
+    unbind = () => {
+        this.onNotify_ = undefined
     }
 }

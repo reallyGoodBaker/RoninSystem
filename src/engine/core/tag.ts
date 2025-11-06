@@ -1,5 +1,5 @@
 import { system, world } from '@minecraft/server'
-import { Resource, Resources } from './architect/resorce'
+import { Resource, Resources } from '@ronin/core/architect/resorce'
 import { ObjectHelper } from '@ronin/utils/helpers/objectHelper'
 
 const isTag = Symbol('isTag')
@@ -171,7 +171,7 @@ export class Tag {
                     if (!tag.isValid) {
                         return null
                     }
-        
+
                     parent[key] = tag
                 }
             })

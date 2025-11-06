@@ -2,6 +2,7 @@ import { Entity } from '@minecraft/server'
 import { Actor } from './actor'
 import { Component } from './component'
 import { Constructor } from '../types'
+import { IController } from './controller'
 
 export interface WorldLocation {
     x: number
@@ -63,4 +64,6 @@ export interface ActorManager {
     despawnEntityActor(entity: Entity, clearEntity?: boolean): void
 }
 
-export interface IWorld extends ActorManager {}
+export interface IWorld extends ActorManager {
+    getControllerByActorId<T extends IController>(id: string): T | undefined
+}
