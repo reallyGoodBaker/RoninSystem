@@ -1,4 +1,4 @@
-import { Constructor } from "../types"
+import { ConstructorOf } from "../types"
 
 export interface Resource {
     enter?(): void
@@ -36,9 +36,9 @@ export class Resources {
         return ret as Result<T, Error>
     }
 
-    private static readonly resouceMapping = new Map<Constructor<Resource>, Resource>()
+    private static readonly resouceMapping = new Map<ConstructorOf<Resource>, Resource>()
 
-    static load<T extends readonly Constructor<Resource>[]>(...res: T): { -readonly [K in keyof T]: InstanceType<T[K]> } {
+    static load<T extends readonly ConstructorOf<Resource>[]>(...res: T): { -readonly [K in keyof T]: InstanceType<T[K]> } {
         return res.map(r => {
             const res = Reflect.construct(r, [])
             this.resouceMapping.set(r, res)
@@ -47,11 +47,11 @@ export class Resources {
         }) as any
     }
 
-    static getResouce(ctor: Constructor<Resource>) {
+    static getResouce(ctor: ConstructorOf<Resource>) {
         return this.resouceMapping.get(ctor)
     }
 
-    static unload(...res: Constructor<Resource>[]) {
+    static unload(...res: ConstructorOf<Resource>[]) {
         for (const r of res) {
             const res = this.resouceMapping.get(r)
             res?.exit?.()

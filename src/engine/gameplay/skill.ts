@@ -7,7 +7,7 @@ import { DefaultSkillEffect } from "@ronin/utils/helpers/skillHelper"
 import { EffectModifyOperator, SkillEffect, SkillEffectType, TaggedObjectOptions } from "./effect"
 import { Actor } from "@ronin/core/architect/actor"
 import { Component } from "@ronin/core/architect/component"
-import { Constructor } from '../core/types'
+import { ConstructorOf } from '../core/types'
 
 export abstract class Skill {
     constructor(
@@ -95,7 +95,7 @@ interface SkillEffectData {
 
 export interface SkillSpec {
     lifeTime?: 'active' | 'actor' | 'global'
-    skill: Constructor<Skill | SkillWithEvent, []>
+    skill: ConstructorOf<Skill | SkillWithEvent, []>
     variant?: number
     grantedTags?: Tag[]
 }

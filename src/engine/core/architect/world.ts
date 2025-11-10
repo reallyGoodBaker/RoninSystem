@@ -1,7 +1,7 @@
 import { Entity } from '@minecraft/server'
 import { Actor } from './actor'
 import { Component } from './component'
-import { Constructor } from '../types'
+import { ConstructorOf } from '../types'
 import { IController } from './controller'
 
 export interface WorldLocation {
@@ -17,7 +17,7 @@ export interface ActorManager {
      * @param id 
      * @param components 
      */
-    spawnActor<T extends Actor = Actor>(id: string, spawnClass: Constructor<T>, ...components: Component[]): T
+    spawnActor<T extends Actor = Actor>(id: string, spawnClass: ConstructorOf<T>, ...components: Component[]): T
 
     /**
      * 销毁一个 Actor
@@ -45,7 +45,7 @@ export interface ActorManager {
      * @param actorClass 
      * @param components 
      */
-    spawnEntityActor<T extends Actor>(entity: Entity, actorClass: Constructor<T>, ...components: Component[]): Actor
+    spawnEntityActor<T extends Actor>(entity: Entity, actorClass: ConstructorOf<T>, ...components: Component[]): Actor
 
     /**
      * 从给定的 Entity 类型和位置绑定一个Actor
@@ -54,7 +54,7 @@ export interface ActorManager {
      * @param actorClass 
      * @param components 
      */
-    spawnEntityActor<T extends Actor>(type: string, dim: WorldLocation, actorClass: Constructor<T>, ...components: Component[]): Actor
+    spawnEntityActor<T extends Actor>(type: string, dim: WorldLocation, actorClass: ConstructorOf<T>, ...components: Component[]): Actor
 
     /**
      * 取消绑定一个 Entity 的 Actor

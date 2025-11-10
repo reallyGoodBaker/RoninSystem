@@ -1,5 +1,5 @@
 import { Component } from "@ronin/core/architect/component"
-import { Constructor } from "@ronin/core/types"
+import { ConstructorOf } from "@ronin/core/types"
 import { Controller, IController, PlayerController } from "@ronin/core/architect/controller"
 import { BasePlayer, BasePlayerController } from "@ronin/core/predefined"
 
@@ -17,32 +17,32 @@ export const AutoSpawns: string[] = [
  * 生物初始化时加载的组件
  * 若需要对特定生物进行自定义 {@link Actor} 绑定，请使用 {@link Application.spawnActor}
  */
-export const ActorComponents: Constructor<Component>[] = [
+export const ActorComponents: ConstructorOf<Component>[] = [
 
 ]
 
 /**
  * 玩家初始化时加载的组件
  */
-export const PlayerComponents: Constructor<Component>[] = [
+export const PlayerComponents: ConstructorOf<Component>[] = [
 
 ]
 
 /**
  * 生物初始化时加载的 {@link Actor} 类
  */
-export const SpawnClasses: Record<string, Constructor<Actor>> = {
+export const SpawnClasses: Record<string, ConstructorOf<Actor>> = {
     'minecraft:player': BasePlayer,
 }
 
 /**
  * 玩家初始化时加载的 {@link Controller} 类
  */
-export const PlayerControllerClass: Constructor<PlayerController> = BasePlayerController
+export const PlayerControllerClass: ConstructorOf<PlayerController> = BasePlayerController
 
 /**
  * 生物初始化时加载的 {@link Controller} 类
  */
-export const AiControllerClasses: Record<string, Constructor<IController>> = {
+export const AiControllerClasses: Record<string, ConstructorOf<IController>> = {
 
 }

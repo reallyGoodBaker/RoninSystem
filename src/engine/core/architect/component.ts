@@ -1,5 +1,5 @@
 import { ReflectConfig } from '@ronin/core/architect/reflect'
-import { Constructor } from '../types'
+import { ConstructorOf } from '../types'
 import { Actor } from './actor'
 
 /**
@@ -50,7 +50,7 @@ export abstract class Component<A extends Actor = Actor> {
         return this.removeComponent(this)
     }
 
-    getComponent<T extends Component>(cls: Constructor<T>): T
+    getComponent<T extends Component>(cls: ConstructorOf<T>): T
     getComponent<T extends Component>(name: string): T
     getComponent<T extends Component>(arg: any): T {
         return this.actor.getComponent(arg)

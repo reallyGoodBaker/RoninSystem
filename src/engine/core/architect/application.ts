@@ -4,7 +4,7 @@ import { Component } from './component'
 import { CommandRegistry } from '../command'
 import { CustomCommand, Param, registerAllFromAnnotations } from '@ronin/utils/command'
 import { ticking } from '../ticking'
-import { Constructor } from '../types';
+import { ConstructorOf } from '../types';
 import { Actor } from './actor'
 import { Mod, ModBase } from './mod'
 import { IWorld, WorldLocation } from './world'
@@ -23,7 +23,7 @@ const { TOKENS } = PROFIER_CONFIG
 export interface IApplication extends IWorld, Resource, IPluginLoader {}
 
 export interface ApplicationEvents {
-    actorSpawned: [ Actor, Constructor<Actor>, Component[] ]
+    actorSpawned: [ Actor, ConstructorOf<Actor>, Component[] ]
     actorDespawn: [ Actor | undefined, string ]
 }
 
@@ -39,7 +39,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
 
     initialized = false
 
-    spawnActor<T extends Actor = Actor>(id: string, spawnClass: Constructor<T>, ...components: Component[]): T {
+    spawnActor<T extends Actor = Actor>(id: string, spawnClass: ConstructorOf<T>, ...components: Component[]): T {
         const actor = Reflect.construct(spawnClass, [ id ])
         components.forEach(component => actor.addComponent(component))
         this.actors.set(id, actor)
@@ -101,13 +101,13 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
     }
 
     spawnEntityActor(entity: Entity, ...components: Component[]): Actor
-    spawnEntityActor<T extends Actor>(entity: Entity, actorClass: Constructor<T>, ...components: Component[]): Actor
-    spawnEntityActor<T extends Actor>(type: string, location: WorldLocation, actorClass: Constructor<T>, ...components: Component[]): Actor
+    spawnEntityActor<T extends Actor>(entity: Entity, actorClass: ConstructorOf<T>, ...components: Component[]): Actor
+    spawnEntityActor<T extends Actor>(type: string, location: WorldLocation, actorClass: ConstructorOf<T>, ...components: Component[]): Actor
     spawnEntityActor(entity: Entity | string, arg1: unknown, ...components: any[]): Actor {
         if (typeof entity === 'string') {
             const type = entity
             const loc = arg1 as WorldLocation
-            const actorClass = components.shift() as unknown as Constructor<Actor>
+            const actorClass = components.shift() as unknown as ConstructorOf<Actor>
             const entity_ = world.getDimension(loc.dimension).spawnEntity(type as any, loc)
             return this.spawnEntityActor(entity_, actorClass, ...components)
         }
@@ -121,7 +121,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
             )
         }
 
-        const actorClass = arg1 as Constructor<Actor>
+        const actorClass = arg1 as ConstructorOf<Actor>
         const existingActor = this.actors.get(entity.id)
         if (existingActor) {
             try {
@@ -258,7 +258,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
     }
 
     readonly plugins = new Map<string, IPlugin>()
-    loadPlugin(...ctor: Constructor<IPlugin>[]): IPluginLoader {
+    loadPlugin(...ctor: ConstructorOf<IPlugin>[]): IPluginLoader {
         ctor.forEach(ctor => {
             const plugin = Reflect.construct(ctor, [])
             plugin.startModule(this)
@@ -360,7 +360,7 @@ export class ApplicationCommands {
     }
 }
 
-export function Entry(fn: Constructor<ModBase>) {
+export function Entry(fn: ConstructorOf<ModBase>) {
     Resources.load(
         fn,
         Application,

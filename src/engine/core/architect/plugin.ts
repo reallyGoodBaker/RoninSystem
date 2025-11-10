@@ -1,4 +1,4 @@
-import { Constructor } from "../types"
+import { ConstructorOf } from "../types"
 import { IApplication } from "./application"
 
 export interface IPlugin {
@@ -9,7 +9,7 @@ export interface IPlugin {
 }
 
 export interface IPluginLoader {
-    loadPlugin(...ctor: Constructor<IPlugin>[]): IPluginLoader
+    loadPlugin(...ctor: ConstructorOf<IPlugin>[]): IPluginLoader
     unloadPlugin(...name: string[]): IPluginLoader
     getPlugin(name: string): IPlugin | undefined
 }

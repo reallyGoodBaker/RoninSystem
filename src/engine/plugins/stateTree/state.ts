@@ -94,9 +94,11 @@ export abstract class State {
 
     /**
      * 当 `tryTransitionEveryTick` 为 true 时，每刻都会调用。
-     * 默认直接返回根节点，若需要进入其他状态，请重写此方法
+     * 默认直接返回根节点，若需要进入其他状态，请重写此方法。
+     * 
+     * 返回 undefined 表示无法进入其他状态
      * @param stateTree 
      * @returns 
      */
-    canTransitionTo(stateTree: StateTree): string { return 'root' }
+    canTransitionTo(stateTree: StateTree): string | undefined { return 'root' }
 }

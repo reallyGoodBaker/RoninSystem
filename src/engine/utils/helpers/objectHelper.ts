@@ -1,5 +1,5 @@
 import { EventInstigator } from "@ronin/core/architect/event"
-import { Constructor } from "@ronin/core/types"
+import { ConstructorOf } from "@ronin/core/types"
 
 type ObjectHelperEvents = {
     construct: [ Function, unknown, unknown[] ]
@@ -26,7 +26,7 @@ class ObjectHelperClass extends EventInstigator<ObjectHelperEvents> {
         return obj !== null && typeof obj === 'object'
     }
 
-    newObject<T>(ctor: Constructor<T>, args: any[] = []) {
+    newObject<T>(ctor: ConstructorOf<T>, args: any[] = []) {
         const object = Reflect.construct(ctor, args)
         this.trigger('construct', ctor, object, args)
         return object

@@ -2,7 +2,7 @@ import { TaggableObject } from "../tag"
 import { Tickable, ticking } from "../ticking"
 import { Component } from "./component"
 import { ReflectConfig } from "@ronin/core/architect/reflect"
-import { Constructor } from "../types"
+import { ConstructorOf } from "../types"
 
 const isActor = Symbol('isActor')
 
@@ -86,7 +86,7 @@ export class Actor extends TaggableObject implements Tickable {
         return this
     }
 
-    getComponent<T extends Component>(cls: Constructor<T>): T
+    getComponent<T extends Component>(cls: ConstructorOf<T>): T
     getComponent<T extends Component>(name: string): T
     getComponent<T extends Component>(arg: any): T {
         return this.components.get(
