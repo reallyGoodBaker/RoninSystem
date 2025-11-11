@@ -8,7 +8,7 @@ import { Component } from "./component"
  * 相较于 EventSignal, EventInstigator 的删除事件性能较好，用于需要频繁删除监听器的情况，否则请使用 EventSignal
  */
 export class EventInstigator<M extends { [key in keyof M]: unknown[] } = {}> {
-    readonly events: Record<any, EventLinked> = {}
+    private readonly events: Record<any, EventLinked> = {}
 
     addListener<T extends keyof M>(eventName: T, callback: (...args: M[T]) => void) {
         let eventLinked = this.events[eventName]
@@ -44,7 +44,7 @@ export class EventInstigator<M extends { [key in keyof M]: unknown[] } = {}> {
  * 一个 发布-订阅 模式的事件触发器类，是 {@link EventInstigator} 的 {@link Component} 实现
  */
 export abstract class EventComponent<M extends { [ K in keyof M]: M[K] } = {}, A extends Actor = Actor> extends Component<A> {
-    readonly events: Record<any, EventLinked> = {}
+    private readonly events: Record<any, EventLinked> = {}
 
     addListener<T extends keyof M>(eventName: T, callback: (...args: M[T]) => void) {
         let eventLinked = this.events[eventName]

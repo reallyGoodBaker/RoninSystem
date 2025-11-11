@@ -5,7 +5,7 @@ export interface Task {
     (state: State, stateTree: StateTree): void | Promise<void>
 }
 
-export abstract class State {
+export class State {
     constructor(
         readonly name: string,
         /**
@@ -38,25 +38,25 @@ export abstract class State {
     taskNames: string[] = []
 
     parent?: State
-    protected _children: State[] = []
+    children: State[] = []
 
     appendChild(child: State) {
         child.parent = this
-        this._children.push(child)
+        this.children.push(child)
         return this
     }
 
     private _removeChildByState(child: State) {
-        const index = this._children.indexOf(child)
+        const index = this.children.indexOf(child)
         if (index > -1) {
-            this._children.splice(index, 1)
+            this.children.splice(index, 1)
             child.parent = undefined
         }
         return this
     }
 
     private _removeChildByName(name: string) {
-        const state = this._children.find(child => child.name === name)
+        const state = this.children.find(child => child.name === name)
         if (state) {
             return this._removeChildByState(state)
         }
@@ -76,7 +76,7 @@ export abstract class State {
      * 判断当前状态是否可以进入
      * @param stateTree 
      */
-    abstract canEnter(stateTree: StateTree): boolean
+    canEnter(stateTree: StateTree): boolean { return true }
 
     /**
      * 进入状态时调用
@@ -100,5 +100,5 @@ export abstract class State {
      * @param stateTree 
      * @returns 
      */
-    canTransitionTo(stateTree: StateTree): string | undefined { return 'root' }
+    canTransitionTo?(stateTree: StateTree): string | undefined { return 'root' }
 }

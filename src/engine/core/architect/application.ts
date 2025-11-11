@@ -13,14 +13,13 @@ import { EventInstigator } from './event'
 import { Pawn } from './pawn'
 import { IController, PlayerController } from './controller'
 import { profiler } from '../profiler'
-import { SpawnConfig } from '../config'
-import { AutoSpawns } from '@ronin/config/spawn'
+import { IConfigurator, SpawnConfig } from './config'
 import { IPlugin, IPluginLoader } from './plugin'
 import { PROFIER_CONFIG } from '@ronin/config/profiler'
 
 const { TOKENS } = PROFIER_CONFIG
 
-export interface IApplication extends IWorld, Resource, IPluginLoader {}
+export interface IApplication extends IWorld, Resource, IPluginLoader, IConfigurator {}
 
 export interface ApplicationEvents {
     actorSpawned: [ Actor, ConstructorOf<Actor>, Component[] ]
@@ -161,6 +160,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
         if (this.initialized) return
 
         const spawnConfig = this.spawnConfig
+        this.setConfig('SpawnConfig', spawnConfig)
 
         system.beforeEvents.startup.subscribe(ev => {
             this.serverStarted.resolve(ev)
@@ -173,7 +173,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
             CommandRegistry.registerAll(ev.customCommandRegistry)
 
             const tryCreatePawnForPlayer = (player: Player) => {
-                if (AutoSpawns.includes('minecraft:player')) {
+                if (spawnConfig.canAutoSpawn('minecraft:player')) {
                     const id = `pc_${this.playerControllers.length}`
                     const pc = this.spawnActor(id, spawnConfig.findPlayerControllerClass())
                     this.playerControllers.push(pc)
@@ -202,13 +202,13 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
                 const enId = entity.id
                 if (
                     enId !== 'minecraft:player' &&
-                    AutoSpawns.includes(enId) &&
+                    spawnConfig.canAutoSpawn(enId) &&
                     spawnClass
                 ) {
                     const actor = this.spawnEntityActor(
                         entity,
                         spawnClass,
-                        ...spawnConfig.actorComponentsLoader()
+                        ...spawnConfig.actorComponentsLoader(enId)
                     )
 
                     const aiControllerClass = spawnConfig.findAiControllerClass(enId)
@@ -244,8 +244,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
             Application.modApp?.exit?.()
         })
 
-        ticking.init()
-        //start loop
+        //start actor ticking
         ticking.repeat(() => ticking.tick('actor'))
     }
 
@@ -283,6 +282,16 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
     getPlugin(name: string): IPlugin | undefined {
         return this.plugins.get(name)
     }
+
+    private readonly _config: Record<string, any> = {}
+    getConfig<T>(name: string, defaultVal?: T): T {
+        return this._config[name] ?? defaultVal
+    }
+
+    setConfig(name: string, value: any): void {
+        this._config[name] = value
+    }
+
 }
 
 /**
@@ -353,9 +362,12 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Application Plugins')
     show_plugins() {
+        const messages = Array.from(Application.getInst().plugins.values())
+            .map(({ name, description }) => `\n${TOKENS.ID}${name}§r: ${TOKENS.STR}${description}`)
+
         profiler.info(
-            ...Array.from(Application.getInst().plugins.values())
-                .map(({ name, description }) => `${TOKENS.ID}${name}§r: ${TOKENS.STR}${description}`)
+            `已加载${messages.length}个插件:`,
+            ...messages
         )
     }
 }

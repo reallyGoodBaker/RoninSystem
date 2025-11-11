@@ -13,6 +13,7 @@ export const PROFIER_CONFIG = {
         STR: '§v',
         BOOL: '§1',
         NUM: '§5',
-        ENT: '§5'
+        ENT: '§5',
+        R: '§r'
     }
 }

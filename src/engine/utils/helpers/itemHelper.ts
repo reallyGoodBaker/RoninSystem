@@ -114,9 +114,9 @@ export class ItemHelper {
         }
     }
 
-    static giveItem(actor: Pawn, itemDesc: string | ItemStack, properties: ItemProperties, ench?: EnchantDescriptions) {
+    static giveItem(pawn: Pawn, itemDesc: string | ItemStack, properties: ItemProperties, ench?: EnchantDescriptions) {
         const item = this.createItem(itemDesc, properties)
-        const container = actor.inventory?.container
+        const container = pawn.inventory?.container
         if (!container || !container.isValid) {
             return
         }
@@ -129,8 +129,8 @@ export class ItemHelper {
         return item
     }
 
-    static enchantEquipment(actor: Pawn, slot: EquipmentSlot, desc: EnchantDescriptions) {
-        const item = actor.getEquipment(slot)
+    static enchantEquipment(pawn: Pawn, slot: EquipmentSlot, desc: EnchantDescriptions) {
+        const item = pawn.getEquipment(slot)
         if (!item) {
             return
         }
@@ -138,9 +138,9 @@ export class ItemHelper {
         this.enchantItem(item, desc)
     }
 
-    static equipItem(actor: Pawn, slot: EquipmentSlot, itemDesc: string | ItemStack, properties: ItemStack) {
+    static equipItem(pawn: Pawn, slot: EquipmentSlot, itemDesc: string | ItemStack, properties: ItemStack) {
         const item = this.createItem(itemDesc, properties)
-        actor.setEquipment(slot, item)
+        pawn.setEquipment(slot, item)
     }
 
     @CustomCommand('Give item')

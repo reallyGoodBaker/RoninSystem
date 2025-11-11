@@ -2,9 +2,14 @@ import { ConstructorOf } from "@ronin/core/types"
 import { Component } from "@ronin/core/architect/component"
 import { Actor } from "@ronin/core/architect/actor"
 import { Controller, IController, PlayerController as IPlayerController } from "@ronin/core/architect/controller"
-import { ActorComponents, AiControllerClasses, PlayerComponents, PlayerControllerClass, SpawnClasses } from "@ronin/config/spawn"
-import { BasePlayerController } from "./predefined"
-import { Pawn } from "./architect/pawn"
+import { ActorComponents, AiControllerClasses, AutoSpawns, PlayerComponents, PlayerControllerClass, SpawnClasses } from "@ronin/config/spawn"
+import { BasePlayerController } from "../predefined"
+import { Pawn } from "./pawn"
+
+export interface IConfigurator {
+    getConfig<T>(name: string, defaultVal?: T): T
+    setConfig(name: string, value: any): void
+}
 
 export function registerPlayerComponent(...ctor: ConstructorOf<Component>[]) {
     PlayerComponents.push(...ctor)
@@ -42,25 +47,48 @@ export class SpawnConfig {
         return this.instance
     }
 
+    readonly specifiedActorComponents: Record<string, ConstructorOf<Component>[]> = {}
+
+    actorComponentsLoader = (entityType?: string) => [
+        ...ActorComponents.map(c => new c()),
+        ...((entityType ? this.specifiedActorComponents[entityType] : []) ?? []).map(c => new c())
+    ]
+
     playerComponentsLoader = () => {
         return [
-            ...ActorComponents.map(c => new c()),
+            ...this.actorComponentsLoader('minecraft:player'),
             ...PlayerComponents.map(c => new c())
         ]
     }
 
-    actorComponentsLoader = () => [
-        ...ActorComponents.map(c => new c())
-    ]
-
-    defaultSpawnClass = Actor
+    private defaultSpawnClass = Actor
     private spawnClass: Record<string, ConstructorOf<Actor>> = SpawnClasses
-
-    defaultPlayerControllerClass = BasePlayerController
+    private defaultPlayerControllerClass: ConstructorOf<IPlayerController> = BasePlayerController
     private aiClass: Record<string, ConstructorOf<IController>> = AiControllerClasses
+
+    registerPlayerComponent(ctor: ConstructorOf<Component>) {
+        PlayerComponents.push(ctor)
+    }
+
+    registerSpecifiedActorComponent(entityType: string, ...ctors: ConstructorOf<Component>[]) {
+        let ctorList = this.specifiedActorComponents[entityType] ?? []
+        this.specifiedActorComponents[entityType] = ctorList.concat(ctors)
+    }
+
+    registerActorComponent(ctor: ConstructorOf<Component>) {
+        ActorComponents.push(ctor)
+    }
 
     registerSpawnClass(entityType: string, ctor: ConstructorOf<Actor>) {
         this.spawnClass[entityType] = ctor
+    }
+
+    registerPlayerControllerClass(ctor: ConstructorOf<IPlayerController>) {
+        this.defaultPlayerControllerClass = ctor
+    }
+
+    registerAiControllerClass(entityType: string, ctor: ConstructorOf<IController>) {
+        this.aiClass[entityType] = ctor
     }
 
     findSpawnClass(entityType: string, strict = false) {
@@ -79,6 +107,14 @@ export class SpawnConfig {
 
     findAiControllerClass(entityType: string) {
         return this.aiClass[entityType] as ConstructorOf<Controller>
+    }
+
+    canAutoSpawn(entityType: string) {
+        return AutoSpawns.includes(entityType)
+    }
+
+    registerAutoSpawn(entityType: string) {
+        AutoSpawns.push(entityType)
     }
 }
 

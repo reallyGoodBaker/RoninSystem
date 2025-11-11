@@ -152,10 +152,10 @@ export class Actor extends TaggableObject implements Tickable {
         // 所有组件都已准备好时，调用 start 方法
         if (this._componentsReady.size === this.components.size) {
             this.start()
-        }
 
-        // 标记组件已开始
-        this._componentsStarted = true
+            // 标记组件已开始
+            this._componentsStarted = true
+        }
     }
 
 }

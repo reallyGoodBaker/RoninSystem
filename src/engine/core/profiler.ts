@@ -1,5 +1,6 @@
 import { system, world } from "@minecraft/server"
 import { PROFIER_CONFIG } from "@ronin/config/profiler"
+import { ConstructorOf } from "./types"
 
 const {
     TOKENS,
@@ -11,7 +12,50 @@ const {
     NUM_FIXED
 } = PROFIER_CONFIG
 
+
 export namespace profiler {
+
+interface DebugTrack {
+    name: string
+    start: number
+    end: number
+    color: string
+}
+
+interface DebugTreeNode {
+    accessor: string
+    name: string
+    color: string
+}
+
+class Profile {
+    static profiles = new Map<string, Profile>()
+    static getProfile(name: string) {
+        return this.profiles.get(name) ?? this.profiles.set(name, new Profile(name)).get(name)
+    }
+
+    static removeProfile(name: string) {
+        return this.profiles.delete(name)
+    }
+
+    constructor(public name: string) {}
+
+    textContent = ''
+    private _tracks: DebugTrack[] = []
+    private _treeNodes: DebugTreeNode[] = []
+
+    addTrack(name: string, start: number, end: number, color=MEDIUM_COLOR) {
+        this._tracks.push({ name, start, end, color })
+    }
+
+    addTreeNode(accessor: string, color=MEDIUM_COLOR) {
+        const name = accessor.split('.').at(-1)!
+        this._treeNodes.push({ name, color, accessor })
+    }
+
+    
+
+}
 
 function _write(level: 'debug' | 'info' | 'warn' | 'error', message: string) {
     function _writeToDebuggers(message: string) {
@@ -58,8 +102,18 @@ const ignoredRawTypes = [
     Symbol.prototype,
     Error.prototype,
 ]
-export function print(level: 'debug' | 'info' | 'warn' | 'error', ...message: any[]) {
-    const msg = message.map(m => {
+const customPrinters = new Map<(inst: any) => boolean, (inst: any) => string>()
+
+export function registerCustomPrinter(matcher: (inst: any) => boolean, printer: (inst: any) => string) {
+    customPrinters.set(matcher, printer)
+}
+
+export function registerCustomTypePrinter<T extends ConstructorOf<any>>(type: T, printer: (inst: InstanceType<T>) => string) {
+    customPrinters.set(inst => inst instanceof (type as any), printer)
+}
+
+export function format(...message: any[]) {
+    return message.map(m => {
         const typeOf = typeof m
 
         if (rawTypes.includes(typeOf)) {
@@ -76,6 +130,14 @@ export function print(level: 'debug' | 'info' | 'warn' | 'error', ...message: an
 
         if ('typeId' in m) {
             return m.typeId
+        }
+
+        if (customPrinters.size) {
+            for (const [ matcher, printer ] of customPrinters) {
+                if (matcher(m)) {
+                    return printer(m)
+                }
+            }
         }
 
         let current = m
@@ -117,9 +179,11 @@ export function print(level: 'debug' | 'info' | 'warn' | 'error', ...message: an
         objectInfo.unshift(`${m?.constructor?.name || ''} {}:`)
         objectInfo.push('')
         return objectInfo.join('\n')
-    })
+    }).join(' ')
+}
 
-    out(level, msg.join(' '))
+export function print(level: 'debug' | 'info' | 'warn' | 'error', ...message: any[]) {
+    out(level, format(...message))
 }
 
 export function debug(...message: unknown[]) {

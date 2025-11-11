@@ -133,12 +133,13 @@ export namespace ticking {
         getTickingGroup(tickable.tickingGroup).remove(tickable)
     }
 
-    export function init() {
-        ObjectHelper.addListener('construct', (ctor, inst) => {
-            const instance = <Tickable> inst
-            if (tickableClasses.has(ctor)) {
-                ticking.addTickingObject(instance)
-            }
-        })
-    }
+    /**
+     * 自动将所有Tickable对象添加到ticking调度中
+     */
+    ObjectHelper.addListener('construct', (ctor, inst) => {
+        const instance = <Tickable> inst
+        if (tickableClasses.has(ctor)) {
+            ticking.addTickingObject(instance)
+        }
+    })
 }
