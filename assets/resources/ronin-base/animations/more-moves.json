@@ -244,7 +244,7 @@
 						"1.5": [85, 0, 0]
 					}
 				},
-				"body": {
+				"torso": {
 					"rotation": {
 						"0.0": {
 							"post": [-3.14695, -7.25354, 5.03563],
@@ -511,7 +511,7 @@
 						}
 					}
 				},
-				"body": {
+				"torso": {
 					"rotation": {
 						"0.0": {
 							"post": [-0.78795, -17.48281, 2.62116],
@@ -717,7 +717,7 @@
 						"0.5": [30, 0, 0]
 					}
 				},
-				"body": {
+				"torso": {
 					"rotation": {
 						"0.0": [0, 0, 0],
 						"0.5": [15, 0, 0]
@@ -736,7 +736,7 @@
 		"animation.player.move.stand": {
 			"loop": true
 		},
-		"animation.player.move.body_rot_fix": {
+		"animation.player.move.torso_rot_fix": {
 			"loop": true,
 			"override_previous_animation": true
 		},
