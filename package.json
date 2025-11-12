@@ -4,6 +4,7 @@
     "main": "dist/index.js",
     "type": "module",
     "scripts": {
+        "link": "node ./scripts/link.js",
         "build": "rollup -c",
         "watch": "rollup -c -w",
         "build-editor": "rollup -c ./editor.config.js && npx @tailwindcss/cli -i ./src/engine/tools/editor/style.css -o ./dist/editor/style.css",

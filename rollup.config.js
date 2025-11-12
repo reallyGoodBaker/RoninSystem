@@ -3,12 +3,13 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import { typescriptPaths } from 'rollup-plugin-typescript-paths'
 import terser from '@rollup/plugin-terser'
 import json from '@rollup/plugin-json'
+import syncAssetsPlugin from './scripts/syncAssets.js'
 
 export default [
     {
         input: './src/index.ts',
         output: {
-            file: './dist/index.js',
+            file: './assets/behaviors/ronin-base/scripts/index.js',
             format: 'esm'
         },
         plugins: [
@@ -17,6 +18,7 @@ export default [
             nodeResolve(),
             typescriptPaths(),
             // terser(),
+            syncAssetsPlugin(),
         ],
         external: [
             "@minecraft/server",

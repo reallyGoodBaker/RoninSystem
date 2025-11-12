@@ -5,7 +5,6 @@ import { StateTreePlugin } from "@ronin/plugins/stateTree"
 import { StateTree } from "@ronin/plugins/stateTree/stateTree"
 import { StateTreeConfKey } from "@ronin/plugins/stateTree/stateTreeComponent"
 
-
 @Entry
 export class MyMod extends ModBase {
     start(app: IApplication) {
