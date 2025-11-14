@@ -26,6 +26,11 @@
 			}
 		},
 		"component_groups": {
+            "ss:slow_movement": {
+                "minecraft:movement": {
+                    "value": 0.02
+                }
+            },
 			"minecraft:add_raid_omen": {
 				"minecraft:spell_effects": {
 					"add_effects": [
@@ -232,7 +237,21 @@
 						"minecraft:raid_trigger"
 					]
 				}
-			}
+			},
+            "ss:slow_move": {
+                "add": {
+                    "component_groups": [
+                        "ss:slow_movement"
+                    ]
+                }
+            },
+            "ss:reset_move": {
+                "remove": {
+                    "component_groups": [
+                        "ss:slow_movement"
+                    ]
+                }
+            }
 		}
 	}
 }
