@@ -22,7 +22,8 @@
             "ss:chargeable": {
                 "triggerThreshold": 6,
                 "holdThreshold": 12
-            }
+            },
+            "minecraft:destroy_in_creative": false
         }
     }
 }

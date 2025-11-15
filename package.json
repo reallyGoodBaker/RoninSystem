@@ -14,13 +14,14 @@
     "license": "GPL-3.0-only",
     "description": "",
     "devDependencies": {
-        "@minecraft/server": "^2.3.0-beta.1.21.114-stable",
+        "@minecraft/server": "^2.4.0-beta.1.21.123-stable",
         "@minecraft/server-ui": "^2.0.0",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.4",
         "@types/sockjs": "^0.3.36",
+        "blockbench-types": "^5.0.0",
         "rollup": "^4.52.5",
         "rollup-plugin-typescript-paths": "^1.5.0",
         "tailwindcss": "^4.1.16",
@@ -29,7 +30,7 @@
         "typescript": "^5.9.2"
     },
     "dependencies": {
-        "@minecraft/math": "^2.2.8",
+        "@minecraft/math": "^2.2.11",
         "@rollup/plugin-commonjs": "^28.0.6",
         "@tailwindcss/cli": "^4.1.16",
         "@types/ws": "^8.18.1",

@@ -2,8 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 
-const legacyMinecraftPath = 'AppData/Local/Packages/Microsoft.MinecraftUWP_8wekyb3d8bbwe/LocalState/games/com.mojang'
-const mcRoot = path.join(os.homedir(), legacyMinecraftPath)
+const mcRoot = path.join(os.homedir(), 'AppData/Roaming/Minecraft Bedrock/Users/Shared/games/com.mojang')
 
 const devBehaviorPath = path.join(mcRoot, 'development_behavior_packs')
 const devResourcePath = path.join(mcRoot, 'development_resource_packs')
@@ -27,5 +26,13 @@ export function cpAssets() {
         } catch (error) {
             console.error(error)
         }
+    })
+}
+
+export function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
     })
 }

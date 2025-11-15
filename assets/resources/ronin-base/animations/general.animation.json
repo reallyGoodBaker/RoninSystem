@@ -33,10 +33,6 @@
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
 				},
-				"leftJoint": {
-					"rotation": [0, 0, 0],
-					"position": [0, 0, 0]
-				},
 				"leftShield": {
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
@@ -54,10 +50,6 @@
 					"position": [0, 0, 0],
 					"scale": 1
 				},
-				"rightJoint": {
-					"rotation": [0, 0, 0],
-					"position": [0, 0, 0]
-				},
 				"waistSword": {
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
@@ -74,19 +66,11 @@
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
 				},
-				"rightKnee": {
-					"rotation": [0, 0, 0],
-					"position": [0, 0, 0]
-				},
 				"leftLeg": {
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
 				},
 				"leftShank": {
-					"rotation": [0, 0, 0],
-					"position": [0, 0, 0]
-				},
-				"leftKnee": {
 					"rotation": [0, 0, 0],
 					"position": [0, 0, 0]
 				}

@@ -5,6 +5,9 @@ export default function syncAssetsPlugin() {
         name: 'sync-assets',
         watchChange(id, changes) {
             cpAssets()
+        },
+        buildEnd() {
+            cpAssets()
         }
     }
 }

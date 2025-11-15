@@ -157,7 +157,6 @@
                 "custom.jump": "animation.player.custom.jump",
                 "custom.fall": "animation.player.custom.fall",
                 "custom.stand": "animation.player.move.stand",
-                "body_fix": "animation.player.move.body_rot_fix",
 
                 "pr.stand": "animation.posture.right.stand",
                 "pr.walk_front": "animation.posture.right.walk_front",

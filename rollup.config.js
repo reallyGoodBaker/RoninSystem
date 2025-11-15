@@ -4,12 +4,14 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths'
 import terser from '@rollup/plugin-terser'
 import json from '@rollup/plugin-json'
 import syncAssetsPlugin from './scripts/syncAssets.js'
+import { parseConf } from './scripts/parser.js'
+
 
 export default [
     {
         input: './src/index.ts',
         output: {
-            file: './assets/behaviors/ronin-base/scripts/index.js',
+            file: `./assets/behaviors/${parseConf().behaviorName}/scripts/index.js`,
             format: 'esm'
         },
         plugins: [
@@ -17,7 +19,7 @@ export default [
             ts(),
             nodeResolve(),
             typescriptPaths(),
-            // terser(),
+            terser(),
             syncAssetsPlugin(),
         ],
         external: [
