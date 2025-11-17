@@ -11,8 +11,8 @@
         "editor": "npm run build-editor && node ./dist/editor/server.cjs"
     },
     "author": "RGB39",
-    "license": "GPL-3.0-only",
-    "description": "",
+    "license": "MIT",
+    "description": "An advanced combat system for Minecraft Bedrock Edition.",
     "devDependencies": {
         "@minecraft/server": "^2.4.0-beta.1.21.123-stable",
         "@minecraft/server-ui": "^2.0.0",

@@ -1,9 +1,0 @@
-{
-  "name": "timeline-track-plugin",
-  "version": "1.0.0",
-  "description": "为Blockbench时间轴添加新轨道的插件",
-  "main": "timeline_track.js",
-  "tags": ["timeline", "animation", "track"],
-  "author": "RoninSystem",
-  "icon": "icon.png"
-}
