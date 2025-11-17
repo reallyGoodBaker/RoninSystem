@@ -1,20 +1,20 @@
 import { Replicables } from "../../config/replicables.config"
 
 export interface EncodeDecoder<T> {
-    encode(data: T): Uint8Array
-    decode(data: Uint8Array): T
+    encode(data: T): ArrayBuffer
+    decode(data: ArrayBuffer): T
 }
 
 export const jsonEncodeDecoder: EncodeDecoder<any> = {
     encode: (data: any) => {
-        return new TextEncoder().encode(JSON.stringify(data))
+        return new TextEncoder().encode(JSON.stringify(data)).buffer
     },
-    decode: (data: Uint8Array) => {
+    decode: (data: ArrayBuffer) => {
         return JSON.parse(new TextDecoder().decode(data))
     }
 }
 
-export const replicableEncodeDecoder: EncodeDecoder<{ uri: string, data: Uint8Array }> = {
+export const replicableEncodeDecoder: EncodeDecoder<{ uri: string, data: ArrayBuffer }> = {
     encode: ({ uri, data }) => {
         const index = Replicables.indexOf(uri)
         if (index === -1) {
@@ -22,7 +22,7 @@ export const replicableEncodeDecoder: EncodeDecoder<{ uri: string, data: Uint8Ar
             const buff = new ArrayBuffer(4)
             const dataView = new DataView(buff)
             dataView.setUint32(0, 0xFFFFFFFF) // 使用最大 uint32 值作为无效标记
-            return new Uint8Array(buff)
+            return buff
         }
 
         const buff = new ArrayBuffer(data.byteLength + 4)
@@ -30,13 +30,13 @@ export const replicableEncodeDecoder: EncodeDecoder<{ uri: string, data: Uint8Ar
         dataView.setUint32(0, index)
         const uint8View = new Uint8Array(buff)
         uint8View.set(new Uint8Array(data), 4)
-        return uint8View
+        return uint8View.buffer
     },
-    decode: (data: Uint8Array) => {
+    decode: (data: ArrayBuffer) => {
         if (data.byteLength < 4) {
             throw new Error('Invalid data format: data too short')
         }
-        const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength)
+        const dataView = new DataView(data)
         const index = dataView.getUint32(0)
         
         // 检查是否为无效标记
@@ -48,7 +48,10 @@ export const replicableEncodeDecoder: EncodeDecoder<{ uri: string, data: Uint8Ar
             throw new Error(`Invalid index: ${index}`)
         }
         const uri = Replicables[index]
-        const uint8View = new Uint8Array(data.buffer, data.byteOffset + 4, data.byteLength - 4)
-        return { uri, data: uint8View }
+        // 创建数据的独立副本，避免内存共享问题
+        const dataBytes = new Uint8Array(data, 4, data.byteLength - 4)
+        const dataCopy = new ArrayBuffer(dataBytes.length)
+        new Uint8Array(dataCopy).set(dataBytes)
+        return { uri, data: dataCopy }
     }
 }

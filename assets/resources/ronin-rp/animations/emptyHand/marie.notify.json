@@ -1,0 +1,8 @@
+{
+    "anim_notifies": {
+        "animation.ss.marie.k": {
+            "blocking": [0.1, 0.2],
+            "damage": 0.38
+        }
+    }
+}

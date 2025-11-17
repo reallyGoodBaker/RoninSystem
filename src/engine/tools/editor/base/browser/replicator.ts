@@ -6,7 +6,7 @@ const replicableSetters = new Map<string, (value: unknown) => void>()
 
 class ReplicableChannel {
     static ws: WebSocket | null = null
-    static messageCache: Uint8Array[] = []
+    static messageCache: ArrayBuffer[] = []
 
     static getWebSocket() {
         if (!this.ws) {
@@ -31,14 +31,14 @@ class ReplicableChannel {
     }
 
     static init() {
-        this.messageCache.forEach((m: Uint8Array) => this.ws?.send(m.buffer))
+        this.messageCache.forEach((m: ArrayBuffer) => this.ws?.send(m))
         this.messageCache.length = 0
     }
 
-    static write(m: Uint8Array) {
+    static write(m: ArrayBuffer) {
         const ws = this.getWebSocket()
         if (ws.readyState === WebSocket.OPEN) {
-            ws.send(m.buffer)
+            ws.send(m)
             return true
         } else {
             this.messageCache.push(m)

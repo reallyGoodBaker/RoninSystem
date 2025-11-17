@@ -39,7 +39,7 @@ class ReplicableChannel {
         this.wss.on('connection', (ws) => {
             this.conns.push(ws)
             ws.on('message', (recev: Buffer) => {
-                const { uri, data } = replicableEncodeDecoder.decode(new Uint8Array(recev))
+                const { uri, data } = replicableEncodeDecoder.decode(new Uint8Array(recev).buffer)
                 replicableSetters.get(uri)?.(data)
             })
             ws.on('close', () => {
@@ -83,10 +83,10 @@ export function replicable<T>(
         }
 
         actionIsFromRemotes.pop()
-        ReplicableChannel.write(replicableEncodeDecoder.encode({
+        ReplicableChannel.write({
             uri,
             data: encodeDecoder.encode(getter())
-        }))
+        })
     })
 
     function newSetter(v: T) {
