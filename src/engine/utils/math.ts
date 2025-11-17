@@ -209,3 +209,17 @@ export class MathUtils {
         }
     }
 }
+
+export class FloatUtils {
+    static greaterThan(a: number, b: number): boolean {
+        return a > b && !this.equals(a, b)
+    }
+
+    static lessThan(a: number, b: number): boolean {
+        return a < b && !this.equals(a, b)
+    }
+
+    static equals(a: number, b: number): boolean {
+        return Math.abs(a - b) < Number.EPSILON
+    }
+}
