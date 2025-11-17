@@ -3,18 +3,18 @@
         "target": "esnext",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "module": "esnext", 
+        "module": "esnext",
         "rootDir": "./",
         "moduleResolution": "bundler",
-    "baseUrl": "./src/engine/tools",
-    "paths": {
-        "@ronin/*": [
-            "../../engine/*"
-        ],
-        "@/*": [
-            "../../*"
-        ]
-    },
+        "baseUrl": "./src/engine/tools",
+        "paths": {
+            "@ronin/*": [
+                "../../engine/*"
+            ],
+            "@/*": [
+                "../../*"
+            ]
+        },
         "allowJs": true,
         "outDir": "./dist",
         "esModuleInterop": true,
