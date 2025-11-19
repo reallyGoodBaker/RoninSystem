@@ -6,7 +6,10 @@ export interface Setter<T> {
     (value: T): T
 }
 
+const isCapturer: unique symbol = Symbol('isCapturer')
+
 export interface Capturer<T> extends Getter<T>{
+    [isCapturer]: true
     effects: (() => void)[]
 }
 
@@ -31,6 +34,7 @@ export function createSignal<T>(
         return value
     }
 
+    scopeCapturer[isCapturer] = true
     scopeCapturer.effects = []
 
     const setter = (newValue: T) => {
@@ -48,6 +52,9 @@ export function tryCallEffectsOnCapturer(capturer: Capturer<unknown>) {
     capturer.effects.forEach(fn => fn())
 }
 
+export function isGetter(getter: Getter<any>) {
+    return (getter as any)[isCapturer] === true
+}
 
 /**
  * @param fn 当 `fn` 中的响应式变量发生变化时，会调用 `fn`
