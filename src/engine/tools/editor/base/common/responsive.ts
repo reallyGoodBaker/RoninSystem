@@ -3,18 +3,49 @@ export interface Getter<T> {
 }
 
 export interface Setter<T> {
-    (value: T): T
+    (value: T): void
 }
 
 const isCapturer: unique symbol = Symbol('isCapturer')
 
+interface Effect {
+    raw: CallableFunction
+    fn: CallableFunction
+}
+
 export interface Capturer<T> extends Getter<T>{
     [isCapturer]: true
-    effects: (() => void)[]
+    effects: Effect[]
 }
 
 let currentCapturer = new Set<Capturer<unknown>>()
 let effectScopeDepth = 0
+
+class EffectTicker {
+    private _queued = false
+    private _queue = new Set<CallableFunction>()
+    private _raws = new Set<CallableFunction>()
+
+    tick(eff: Effect) {
+        if (!this._queued) {
+            this._queued = true
+            queueMicrotask(() => {
+                this._queued = false
+                this._queue.forEach(fn => fn())
+                this._queue.clear()
+                this._raws.clear()
+            })
+        }
+
+        const { raw, fn } = eff
+        if (!this._raws.has(raw)) {
+            this._raws.add(raw)
+            this._queue.add(fn)
+        }
+    }
+}
+
+const effectTicker = new EffectTicker()
 
 /**
  * 响应式 getter 和 setter
@@ -40,7 +71,7 @@ export function createSignal<T>(
     const setter = (newValue: T) => {
         const old = value
         value = updater(newValue, old)
-        scopeCapturer.effects.forEach(fn => fn())
+        scopeCapturer.effects.forEach(eff => effectTicker.tick(eff))
         return value
     }
 
@@ -49,7 +80,7 @@ export function createSignal<T>(
 
 
 export function tryCallEffectsOnCapturer(capturer: Capturer<unknown>) {
-    capturer.effects.forEach(fn => fn())
+    capturer.effects.forEach(effect => effect.fn())
 }
 
 export function isGetter(getter: Getter<any>) {
@@ -65,11 +96,13 @@ export function createEffect(fn: () => void) {
 
     if (currentCapturer) {
         currentCapturer.forEach(({ effects }) => {
-            effects.push(() => {
+            const _fn = () => {
                 effectScopeDepth++
                 fn()
                 effectScopeDepth--
-            })
+            }
+
+            effects.push({ raw: fn, fn: _fn })
         })
         currentCapturer.clear()
     }

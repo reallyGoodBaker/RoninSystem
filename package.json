@@ -34,6 +34,7 @@
         "@rollup/plugin-commonjs": "^28.0.6",
         "@tailwindcss/cli": "^4.1.16",
         "@types/ws": "^8.18.1",
+        "material-symbols": "^0.39.4",
         "reflect-metadata": "^0.2.2",
         "sockjs": "^0.3.24",
         "typedi": "^0.10.0",

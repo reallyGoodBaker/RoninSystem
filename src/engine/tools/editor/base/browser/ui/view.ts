@@ -26,9 +26,55 @@ const complexType = [
     'object', 'function'
 ]
 
+function getReflexibleAfterNode(getter: Getter<ESTempArgType>) {
+    const evalContentVal = getter()
+    const typeEvaled = typeof evalContentVal
+    if (typeEvaled !== 'object' || typeEvaled === 'object' && evalContentVal === null) {
+        const text = t('')
+        createEffect(() => {
+            text.textContent = String((getter() as any))
+        })
+        return text
+    }
+
+    if ((evalContentVal as Node).nodeType) {
+        let placeholder = document.createElement('div') as ChildNode
+        createEffect(() => {
+            const newPlaceholder = getter()
+            placeholder.replaceWith(getter() as Node)
+            placeholder = newPlaceholder as ChildNode
+        })
+        return placeholder
+    }
+
+    if (Array.isArray(evalContentVal)) {
+        let container = document.createElement('div') as HTMLElement
+
+        createEffect(() => {
+            const newContainer = document.createElement('div')
+            newContainer.style.display = 'contents'
+            container.before(newContainer)
+            container.remove()
+            container = newContainer
+            const newContents = getter() as Node[]
+            newContents.forEach((item: Node) => {
+                container.appendChild(getAfterNode(item))
+            })
+        })
+
+        return container
+    }
+
+    return t(String(evalContentVal))
+}
+
 function getAfterNode(mappedContent: ESTempArgType) {
-    if (mappedContent === null || mappedContent === undefined) {
-        return t(String(mappedContent))
+    if (mappedContent === undefined) {
+        return t('')
+    }
+
+    if (mappedContent === null) {
+        return t('null')
     }
 
     const contentType = typeof mappedContent
@@ -45,41 +91,12 @@ function getAfterNode(mappedContent: ESTempArgType) {
     }
 
     if (isGetter(mappedContent as Getter<any>)) {
-        const getter = mappedContent as Getter<any>
-        const evalContentVal = getter()
-        if (evalContentVal.nodeType) {
-            let placeholder = document.createElement('div') as ChildNode
-            createEffect(() => {
-                const newPlaceholder = getter()
-                placeholder.replaceWith(getter())
-                placeholder = newPlaceholder
-            })
-            return placeholder
-        }
-
-        if (Array.isArray(evalContentVal)) {
-            const container = document.createElement('div')
-            container.style.display = 'contents'
-
-            createEffect(() => {
-                container.childNodes.forEach((item: Node) => container.removeChild(item))
-                getter().forEach((item: Node) => {
-                    container.appendChild(getAfterNode(item))
-                })
-            })
-
-            return container
-        }
-
-        const textNode = t('')
-        createEffect(() => {
-            textNode.textContent = String((mappedContent as Getter<any>)())
-        })
-        return textNode
+        return getReflexibleAfterNode(mappedContent as Getter<any>)
     }
 
     return t(String(mappedContent))
 }
+
 
 export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
     const mapping: Record<string, ESTempArgType> = {}
@@ -94,18 +111,31 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
 
     traverse(compiledDom.body, node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-            // 处理事件
             const el = <HTMLElement> node
             const attrs = el.attributes
             for (const attr of attrs) {
-                const eventName = attr.nodeName
-                if (!eventName.startsWith('@')) {
+                const nodeName = attr.nodeName
+
+                // 处理事件
+                if (nodeName.startsWith('@')) {
+                    const handlerKey = attr.value
+                    attr.ownerElement?.addEventListener(attr.nodeName.replace('@', ''), mapping[handlerKey] as EventListener)
+                    attrs.removeNamedItem(attr.nodeName)
                     continue
                 }
 
-                const handlerKey = attr.value
-                attr.ownerElement?.addEventListener(attr.nodeName.replace('@', ''), mapping[handlerKey] as EventListener)
-                attrs.removeNamedItem(attr.nodeName)
+                // 处理class
+                if (nodeName === 'class') {
+                    const classList = attr.value.split(' ')
+                    classList.forEach(className => {
+                        const styles = mapping[className]
+                        if (styles) {
+                            el.classList.add(...(styles as string).split(/\s+/))
+                        }
+                    })
+                    continue
+                }
+
             }
             return
         }

@@ -24,6 +24,10 @@ const server = http.createServer((req, res) => {
         return res.end(fs.readFileSync(path.join(__dirname, './style.css')))
     }
 
+    if (req.url === '/material-symbols-rounded.woff2') {
+        return res.end(fs.readFileSync(path.join(__dirname, './material-symbols-rounded.woff2')))
+    }
+
     return res.end()
 })
 

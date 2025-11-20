@@ -6,12 +6,14 @@ export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Fu
         <div
             @click="${onClick}"
             class="
-            not-last:after:content-['>']
+            flex
+            text-sm
             text-gray-500
             hover:text-gray-300
             active:text-gray-400
             select-none
             cursor-pointer
+            text-nowrap
         ">${text}</div>
     `
 }
