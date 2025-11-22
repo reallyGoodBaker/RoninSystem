@@ -1,6 +1,6 @@
-import { html } from "../view"
-import { replicable } from '../../replicator'
-import { createComputed } from "../../../common/responsive"
+import { html } from "../../view"
+import { replicable } from '../../../replicator'
+import { createComputed } from "../../../../common/responsive"
 import { FileView, FileDesc } from "./fileView"
 import { BreadcrumbUtils } from "../breadcrumbs/breadcrumbsView"
 import { ParentFolder } from "./parentFolder"

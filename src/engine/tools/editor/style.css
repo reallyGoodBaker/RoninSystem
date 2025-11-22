@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import '../../../../node_modules/material-symbols/index.css';
 
+* {
+    user-select: none;
+}
+
 @theme {
     --font-sans: Noto Sans SC, sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;

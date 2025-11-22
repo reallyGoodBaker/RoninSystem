@@ -1,6 +1,6 @@
 import { BreadcrumbUtils } from "../breadcrumbs/breadcrumbsView"
-import { Icon } from "../icon"
-import { html } from "../view"
+import { Icon } from "../../icon"
+import { html } from "../../view"
 
 export function ParentFolder() {
     return html`

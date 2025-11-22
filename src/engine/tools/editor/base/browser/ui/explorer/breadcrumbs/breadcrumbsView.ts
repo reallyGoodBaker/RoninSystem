@@ -1,7 +1,7 @@
-import { createComputed, createEffect } from "../../../common/responsive"
-import { html } from "../view"
+import { createComputed, createEffect } from "../../../../common/responsive"
+import { html } from "../../view"
 import { Breadcrumb } from "./breadcrumb"
-import { replicable } from '../../replicator'
+import { replicable } from '../../../replicator'
 import { FileDescUtils } from "../files/filesLayout"
 
 const [ breadcrumbs, setBreadcrumbs ] = replicable('editor.cwd', 'assets')

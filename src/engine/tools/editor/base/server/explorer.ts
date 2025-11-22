@@ -20,15 +20,22 @@ const [ files, setFiles ] = replicable<FileDesc[]>(
 
 const root = path.join(__dirname, '../../')
 
+function getSortedFileDescs(filePath: string) {
+    return fs.readdirSync(path.join(root, filePath))
+        .map(name => ({
+            name,
+            isDir: fs.statSync(path.join(root, filePath, name)).isDirectory()
+        }))
+        .sort(({ isDir }, { isDir: isDir2 }) => isDir ? -1 : isDir2 ? 1 : 0)
+}
+
 createEffect(() => {
-    setFiles(
-        fs.readdirSync(path.join(root, cwd()))
-            .map(name => ({
-                name,
-                isDir: fs.statSync(path.join(root, cwd(), name)).isDirectory()
-            }))
-            .sort(({ isDir }, { isDir: isDir2 }) => isDir ? 1 : isDir2 ? -1 : 0)
-    )
+    try {
+        setFiles(getSortedFileDescs(cwd()))
+    } catch {
+        setFiles(getSortedFileDescs('assets'))
+        setCwd('assets')
+    }
 })
 
 export {

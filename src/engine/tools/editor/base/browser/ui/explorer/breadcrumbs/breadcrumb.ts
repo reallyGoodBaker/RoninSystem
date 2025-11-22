@@ -1,6 +1,6 @@
-import { Getter } from "../../../common/responsive"
-import { Icon } from "../icon"
-import { html } from "../view"
+import { Getter } from "../../../../common/responsive"
+import { Icon } from "../../icon"
+import { html } from "../../view"
 
 export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Function.prototype as any) {
     return html`
