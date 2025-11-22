@@ -4,6 +4,7 @@ export interface Getter<T> {
 
 export interface Setter<T> {
     (value: T): void
+    (updater: (oldValue: T) => T): void
 }
 
 const isCapturer: unique symbol = Symbol('isCapturer')
@@ -55,7 +56,6 @@ const effectTicker = new EffectTicker()
  */
 export function createSignal<T>(
     value: T,
-    updater: (value: T, old: T) => T = v => v,
 ): [ Getter<T>, Setter<T> ] {
     const scopeCapturer: Capturer<T> = () => {
         if (effectScopeDepth <= 0) {
@@ -68,9 +68,12 @@ export function createSignal<T>(
     scopeCapturer[isCapturer] = true
     scopeCapturer.effects = []
 
-    const setter = (newValue: T) => {
+    const setter = (newValue: T | CallableFunction) => {
         const old = value
-        value = updater(newValue, old)
+        if ((newValue as CallableFunction).call) {
+            value = (newValue as any).call(undefined, old)
+        }
+        value = newValue as T
         scopeCapturer.effects.forEach(eff => effectTicker.tick(eff))
         return value
     }
@@ -106,4 +109,23 @@ export function createEffect(fn: () => void) {
         })
         currentCapturer.clear()
     }
+}
+
+export function createComputed<T>(init: () => T): Getter<T> {
+    const [ getter, setter ] = createSignal<T>(null as any)
+    createEffect(() => setter(init()))
+    return getter
+}
+
+export interface KVStore<T> {
+    get(key: string, defaultValue?: T): T
+    set(key: string, value: T): void
+}
+
+export function createStore<T extends object>(
+    value: T,
+    updater: (value: T, old: T) => T = v => v,
+) {
+    const [ getter, setter ] = createSignal<T>(value)
+
 }

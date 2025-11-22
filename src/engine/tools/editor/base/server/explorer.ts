@@ -27,6 +27,7 @@ createEffect(() => {
                 name,
                 isDir: fs.statSync(path.join(root, cwd(), name)).isDirectory()
             }))
+            .sort(({ isDir }, { isDir: isDir2 }) => isDir ? 1 : isDir2 ? -1 : 0)
     )
 })
 

@@ -9,13 +9,34 @@ export interface FileDesc {
 
 export enum FileTypeIcons {
     JSON = '\uf3bb',
+    CODE = '\ue86f',
+    IMAGE = '\ue3f4',
     OTHER = '\uea7d',
 }
+
+const codeFiles = [
+    'js',
+    'ts',
+]
+
+const imageFiles = [
+    'png',
+    'jpg',
+    'tga',
+]
 
 function findIcon(fileName: string) {
     const suffix = fileName.split('.').pop()
     if (suffix === 'json') {
         return FileTypeIcons.JSON
+    }
+
+    if (codeFiles.includes(suffix as string)) {
+        return FileTypeIcons.CODE
+    }
+
+    if (imageFiles.includes(suffix as string)) {
+        return FileTypeIcons.IMAGE
     }
 
     return FileTypeIcons.OTHER

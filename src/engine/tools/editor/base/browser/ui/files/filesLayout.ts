@@ -1,21 +1,32 @@
 import { html } from "../view"
 import { replicable } from '../../replicator'
-import { createEffect, createSignal } from "../../../common/responsive"
+import { createComputed } from "../../../common/responsive"
 import { FileView, FileDesc } from "./fileView"
+import { BreadcrumbUtils } from "../breadcrumbs/breadcrumbsView"
+import { ParentFolder } from "./parentFolder"
+
+const [ files ] = replicable<FileDesc[]>('editor.files', [])
+
+export class FileDescUtils {
+    static isDir(name: string) {
+        const result =  files().find(file => file.name === name)
+        if (!result) {
+            throw new Error(`File ${name} not found`)
+        }
+
+        return result.isDir
+    }
+}
 
 export function FilesView() {
-    const [ files ] = replicable<FileDesc[]>('editor.files', [])
-    const [ fileViews, setFileViews ] = createSignal<Node[]>([])
-
-    createEffect(() =>
-        setFileViews(
-            files().map(file => FileView(file))
-        )
-    )
-
     return html`
         <div class="flex flex-wrap overflow-y-auto">
-            ${fileViews}
+            ${createComputed(() => {
+                const fileViews = files().map(file => FileView(file))
+                return BreadcrumbUtils.isRootPath()
+                    ? fileViews
+                    : [ ParentFolder(), ...fileViews ]
+            })}
         </div>
     `
 }

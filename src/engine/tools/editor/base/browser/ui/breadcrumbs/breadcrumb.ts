@@ -1,4 +1,5 @@
 import { Getter } from "../../../common/responsive"
+import { Icon } from "../icon"
 import { html } from "../view"
 
 export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Function.prototype as any) {
@@ -6,6 +7,7 @@ export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Fu
         <div
             @click="${onClick}"
             class="
+            h-8
             flex
             text-sm
             text-gray-500
@@ -14,6 +16,12 @@ export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Fu
             select-none
             cursor-pointer
             text-nowrap
-        ">${text}</div>
+            not-last:after:font-symbols
+            not-last:after:flex
+            not-last:after:items-center
+            not-last:after:content-['']
+            not-last:after:text-lg
+            not-last:after:h-6
+        ">${text === 'assets' ? Icon('\ue88a', [ 'scale-80' ]) : text}</div>
     `
 }

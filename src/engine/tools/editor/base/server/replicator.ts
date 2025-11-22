@@ -68,10 +68,9 @@ class ReplicableChannel {
 export function replicable<T>(
     uri: string,
     value: T,
-    updater: (value: T, old: T) => T = v => v,
     encodeDecoder: EncodeDecoder<T> = jsonEncodeDecoder
 ): [ Getter<T>, Setter<T> ] {
-    const [ getter, setter ] = createSignal(value, updater)
+    const [ getter, setter ] = createSignal(value)
 
     let actionIsFromRemotes: boolean[] = []
     
@@ -93,9 +92,9 @@ export function replicable<T>(
         })
     })
 
-    function newSetter(v: T) {
+    function newSetter(v: T | ((v: T) => T)) {
         actionIsFromRemotes.push(false)
-        return setter(v)
+        return setter(v as any)
     }
 
     return [ getter, newSetter ]
