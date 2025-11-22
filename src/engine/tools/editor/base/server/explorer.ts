@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 const [ cwd, setCwd ] = replicable(
-    'editor.cwd',
+    'explorer.cwd',
     'assets'
 )
 
@@ -14,7 +14,7 @@ interface FileDesc {
 }
 
 const [ files, setFiles ] = replicable<FileDesc[]>(
-    'editor.files',
+    'explorer.files',
     []
 )
 

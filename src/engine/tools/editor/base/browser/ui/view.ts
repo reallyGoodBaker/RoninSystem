@@ -37,13 +37,19 @@ function getReflexibleAfterNode(getter: Getter<ESTempArgType>) {
         return text
     }
 
-    if ((evalContentVal as Node).nodeType) {
+    if ((evalContentVal as Node).nodeType !== undefined) {
         let placeholder = document.createElement('div') as ChildNode
         createEffect(() => {
-            const newPlaceholder = getter()
-            placeholder.replaceWith(getter() as Node)
+            const newPlaceholder = getter() as Node
+            if (newPlaceholder.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                placeholder.replaceWith(...newPlaceholder.childNodes)
+            } else if (newPlaceholder.nodeType === Node.ELEMENT_NODE) {
+                placeholder.replaceWith(newPlaceholder as Node)
+            }
+
             placeholder = newPlaceholder as ChildNode
         })
+
         return placeholder
     }
 
@@ -97,6 +103,9 @@ function getAfterNode(mappedContent: ESTempArgType) {
     return t(String(mappedContent))
 }
 
+function createMatcher() {
+    return /\{%=.*?%\}/g
+}
 
 export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
     const mapping: Record<string, ESTempArgType> = {}
@@ -107,7 +116,7 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
     const len = temp.length
     const tempStr = temp.map((str, index) => str + (index < len - 1 ? key(index) : '')).join('')
     const compiledDom = parser.parseFromString(tempStr, 'text/html')
-    const matcher = /\{%=.*?%\}/g
+    const matcher = createMatcher()
 
     traverse(compiledDom.body, node => {
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -133,6 +142,38 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
                             el.classList.add(...(styles as string).split(/\s+/))
                         }
                     })
+                    continue
+                }
+
+                if (nodeName === 'style') {
+                    const el = <HTMLElement> node
+                    const stylesText = attr.value
+                    const matcher = createMatcher()
+                    const staticTexts = stylesText.split(createMatcher())
+                    const mappedStyles: (string | Getter<string>)[] = []
+
+                    let matchedMapping: RegExpExecArray | null = null
+                    while (matchedMapping = matcher.exec(stylesText)) {
+                        mappedStyles.push(mapping[matchedMapping[0]] as string)
+                    }
+
+                    if (!mappedStyles.find(v => isGetter(v as Getter<unknown>))) {
+                        el.style.cssText = staticTexts.map((staticText, index) => staticText + (mappedStyles[index] ?? '')).join('')                        
+                        continue
+                    }
+
+                    createEffect(() => {
+                        el.style.cssText = staticTexts.map((staticText, index) => {
+                            const mappedStyle = mappedStyles[index] ?? ''
+                            if (isGetter(mappedStyle as Getter<unknown>)) {
+                                return staticText + (mappedStyle as Getter<unknown>)()
+                            }
+
+                            return staticText + mappedStyle
+                        }).join('')
+                    })
+
+
                     continue
                 }
 

@@ -24,3 +24,7 @@ body {
 .symbols {
     font-family: "Material Symbols Rounded";
 }
+
+.pop-layer {
+    background-color: rgba(0, 0, 0, 0.5);
+}

@@ -4,7 +4,7 @@ import { Breadcrumb } from "./breadcrumb"
 import { replicable } from '../../../replicator'
 import { FileDescUtils } from "../files/filesLayout"
 
-const [ breadcrumbs, setBreadcrumbs ] = replicable('editor.cwd', 'assets')
+const [ breadcrumbs, setBreadcrumbs ] = replicable('explorer.cwd', 'assets')
 
 export class BreadcrumbUtils {
     static _breadcrumbs = breadcrumbs()

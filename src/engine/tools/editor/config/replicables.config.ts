@@ -2,6 +2,15 @@ export const ServerPort = 39734
 export const EditorClientPort = 39735
 export const Replicables: string[] = [
     'editor.version',
-    'editor.cwd',
-    'editor.files',
+
+    // Explorer
+    'explorer.cwd',
+    'explorer.files',
+
+    // Alert
+    'app.alert.title',
+    'app.alert.message',
+    'app.alert.buttons',
+    'app.alert.result',
+    'app.alert.visible',
 ]

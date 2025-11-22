@@ -5,7 +5,7 @@ import { FileView, FileDesc } from "./fileView"
 import { BreadcrumbUtils } from "../breadcrumbs/breadcrumbsView"
 import { ParentFolder } from "./parentFolder"
 
-const [ files ] = replicable<FileDesc[]>('editor.files', [])
+const [ files ] = replicable<FileDesc[]>('explorer.files', [])
 
 export class FileDescUtils {
     static isDir(name: string) {
