@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import '../../../../node_modules/material-symbols/index.css';
+@import '../../node_modules/material-symbols/index.css';
 
 * {
     user-select: none;

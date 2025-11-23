@@ -24,4 +24,7 @@ export namespace explorer {
         return FileDescUtils.isDir(name)
     }
 
+    export function getFileType(name: string) {
+        return FileDescUtils.findDesc(name)
+    }
 }

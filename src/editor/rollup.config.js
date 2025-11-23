@@ -4,21 +4,19 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths'
 import terser from '@rollup/plugin-terser'
 import json from '@rollup/plugin-json'
 import commonjs from '@rollup/plugin-commonjs'
-import editorTsConf from './editor.tsconfig.json' with { type: 'json' }
+
 
 export default [
     {
-        input: './src/engine/tools/editor/browser.ts',
+        input: './browser.ts',
         output: {
-            file: './dist/editor/browser.js',
+            file: '../../dist/editor/browser.js',
             format: 'esm'
         },
         plugins: [
             json(),
             ts({
-                tsconfig: './editor.tsconfig.json',
-                include: ['src/engine/tools/**/*.ts'],
-                exclude: ['node_modules/**']
+                tsconfig: './tsconfig.json'
             }),
             nodeResolve(),
             typescriptPaths(),
@@ -26,17 +24,15 @@ export default [
         ]
     },
     {
-        input: './src/engine/tools/editor/server.ts',
+        input: './server.ts',
         output: {
-            file: './dist/editor/server.cjs',
+            file: '../../dist/editor/server.cjs',
             format: 'cjs'
         },
         plugins: [
             json(),
             ts({
-                tsconfig: './editor.tsconfig.json',
-                include: ['src/engine/tools/**/*.ts'],
-                exclude: ['node_modules/**']
+                tsconfig: './tsconfig.json'
             }),
             commonjs(),
             nodeResolve(),

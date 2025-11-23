@@ -1,4 +1,4 @@
-import { createEffect, Getter, isGetter } from '../../common/responsive'
+import { createEffect, effectTicker, Getter, isGetter } from '../../common/responsive'
 
 const parser = new DOMParser()
 
@@ -107,9 +107,33 @@ function createMatcher() {
     return /\{%=.*?%\}/g
 }
 
+function createQuickMatcher() {
+    return {
+        test: (str: string) => str.startsWith('{%=') && str.endsWith('%}'),
+    }
+}
+
+function _wrapListener(fn: CallableFunction, owner: Element, evName: string, modifiers: string[]) {
+    const handler = (ev: Event) => {
+        if (modifiers.includes('prevent')) {
+            ev.preventDefault()
+        }
+        if (modifiers.includes('stop')) {
+            ev.stopPropagation()
+        }
+        if (modifiers.includes('once')) {
+            owner.removeEventListener(evName, handler)
+        }
+
+        return fn(ev)
+    }
+
+    return handler
+}
+
 export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
     const mapping: Record<string, ESTempArgType> = {}
-    const _key = Date.now().toString(16)
+    const _key = Date.now().toString(16) + 'x'.repeat(4).replace(/x/g, () => Math.floor(Math.random() * 16).toString(16))
     const key = (index: number) => `{%=${_key}-${index}%}` as const
     args.forEach((arg, index) => mapping[key(index)] = arg)
 
@@ -122,26 +146,51 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
         if (node.nodeType === Node.ELEMENT_NODE) {
             const el = <HTMLElement> node
             const attrs = el.attributes
+            const shouldRemoveAttrs: string[] = []
+
             for (const attr of attrs) {
                 const nodeName = attr.nodeName
 
                 // 处理事件
                 if (nodeName.startsWith('@')) {
-                    const handlerKey = attr.value
-                    attr.ownerElement?.addEventListener(attr.nodeName.replace('@', ''), mapping[handlerKey] as EventListener)
-                    attrs.removeNamedItem(attr.nodeName)
+                    const handlerKey = attr.value.trim()
+                    const [ eventName, ...modifiers ] = attr.nodeName.replace('@', '').split('|')
+                    const handler = _wrapListener(
+                        mapping[handlerKey] as CallableFunction,
+                        el, eventName, modifiers
+                    )
+                    el.addEventListener(eventName, handler)
+                    shouldRemoveAttrs.push(nodeName)
                     continue
                 }
 
                 // 处理class
                 if (nodeName === 'class') {
-                    const classList = attr.value.split(' ')
-                    classList.forEach(className => {
-                        const styles = mapping[className]
-                        if (styles) {
-                            el.classList.add(...(styles as string).split(/\s+/))
-                        }
+                    const matcher = createMatcher()
+                    const staticClasses = attr.value.split(matcher)
+                    const mappedClasses: (string | Getter<string>)[] = []
+
+                    let matchedMapping: RegExpExecArray | null = null
+                    while (matchedMapping = matcher.exec(attr.value)) {
+                        mappedClasses.push(mapping[matchedMapping[0]] as string)
+                    }
+
+                    if (!mappedClasses.find(v => isGetter(v as Getter<unknown>))) {
+                        el.className = staticClasses.map((staticClass, index) => staticClass + (mappedClasses[index] ?? '')).join('')                        
+                        continue
+                    }
+
+                    createEffect(() => {
+                        el.className = staticClasses.map((staticClass, index) => {
+                            const mappedClass = mappedClasses[index] ?? ''
+                            if (isGetter(mappedClass as Getter<unknown>)) {
+                                return staticClass + (mappedClass as Getter<unknown>)()
+                            }
+
+                            return staticClass + mappedClass
+                        }).join('')
                     })
+
                     continue
                 }
 
@@ -178,6 +227,9 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
                 }
 
             }
+
+            shouldRemoveAttrs.forEach(attrName => el.removeAttribute(attrName))
+
             return
         }
 

@@ -1,7 +1,8 @@
 import { createEffect } from '../common/responsive'
-import { replicable } from './replicator'
+import { getServer, replicable } from './replicator'
 import fs from 'fs'
 import path from 'path'
+import { alert } from './alert'
 
 const [ cwd, setCwd ] = replicable(
     'explorer.cwd',
@@ -36,6 +37,10 @@ createEffect(() => {
         setFiles(getSortedFileDescs('assets'))
         setCwd('assets')
     }
+})
+
+getServer().addErrorHandler(err => {
+    alert.open('错误', err.message)
 })
 
 export {

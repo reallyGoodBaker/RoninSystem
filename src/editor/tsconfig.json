@@ -6,20 +6,22 @@
         "module": "esnext",
         "rootDir": "./",
         "moduleResolution": "bundler",
-        "baseUrl": "./src/engine/tools",
         "paths": {
-            "@ronin/*": [
-                "../../engine/*"
+            "@editor/*": [
+                "./*"
             ],
-            "@/*": [
-                "../../*"
+            "@ronin/*": [
+                "../engine/*"
             ]
         },
         "allowJs": true,
-        "outDir": "./dist",
+        "outDir": "../../dist",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "skipLibCheck": true
-    }
+    },
+    "include": [
+        "**/*.ts"
+    ]
 }

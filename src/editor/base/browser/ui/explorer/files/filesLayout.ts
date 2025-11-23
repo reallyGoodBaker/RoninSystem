@@ -8,8 +8,12 @@ import { ParentFolder } from "./parentFolder"
 const [ files ] = replicable<FileDesc[]>('explorer.files', [])
 
 export class FileDescUtils {
+    static findDesc(name: string) {
+        return files().find(file => file.name === name)
+    }
+
     static isDir(name: string) {
-        const result =  files().find(file => file.name === name)
+        const result = this.findDesc(name)
         if (!result) {
             throw new Error(`File ${name} not found`)
         }
@@ -20,7 +24,7 @@ export class FileDescUtils {
 
 export function FilesView() {
     return html`
-        <div class="flex flex-wrap overflow-y-auto">
+        <div class="flex w-full flex-wrap overflow-y-auto">
             ${createComputed(() => {
                 const fileViews = files().map(file => FileView(file))
                 return BreadcrumbUtils.isRootPath()

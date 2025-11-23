@@ -26,13 +26,31 @@ class EffectTicker {
     private _queued = false
     private _queue = new Set<CallableFunction>()
     private _raws = new Set<CallableFunction>()
+    private _currentEffect?: CallableFunction
+    private _capturer?: Capturer<unknown>
 
-    tick(eff: Effect) {
+    private _runQueue(eff: Effect, old: any, scopeCapturer: Capturer<unknown>) {
+        this._queue.forEach(fn => {
+            this._currentEffect = eff.raw
+            this._capturer = scopeCapturer
+            return fn(old)
+        })
+    }
+
+    get currentEffect() {
+        return this._currentEffect
+    }
+
+    get currentCapturer() {
+        return this._capturer
+    }
+
+    tick(eff: Effect, old: any, scopeCapturer: Capturer<unknown>) {
         if (!this._queued) {
             this._queued = true
             queueMicrotask(() => {
                 this._queued = false
-                this._queue.forEach(fn => fn())
+                this._runQueue(eff, old, scopeCapturer)
                 this._queue.clear()
                 this._raws.clear()
             })
@@ -46,7 +64,7 @@ class EffectTicker {
     }
 }
 
-const effectTicker = new EffectTicker()
+export const effectTicker = new EffectTicker()
 
 /**
  * 响应式 getter 和 setter
@@ -72,9 +90,12 @@ export function createSignal<T>(
         const old = value
         if ((newValue as CallableFunction).call) {
             value = (newValue as any).call(undefined, old)
+            scopeCapturer.effects.forEach(eff => effectTicker.tick(eff, old, scopeCapturer))
+            return value
         }
+
         value = newValue as T
-        scopeCapturer.effects.forEach(eff => effectTicker.tick(eff))
+        scopeCapturer.effects.forEach(eff => effectTicker.tick(eff, old, scopeCapturer))
         return value
     }
 
@@ -93,15 +114,15 @@ export function isGetter(getter: Getter<any>) {
 /**
  * @param fn 当 `fn` 中的响应式变量发生变化时，会调用 `fn`
  */
-export function createEffect(fn: () => void) {
+export function createEffect<T>(fn: (old?: T) => void, initVal?: T) {
     // 初始化执行一次，是因为需要进行依赖捕获
-    fn()
+    fn(initVal)
 
     if (currentCapturer) {
         currentCapturer.forEach(({ effects }) => {
-            const _fn = () => {
+            const _fn = (old: any) => {
                 effectScopeDepth++
-                fn()
+                fn(old)
                 effectScopeDepth--
             }
 
