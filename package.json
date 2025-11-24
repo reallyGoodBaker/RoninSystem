@@ -36,6 +36,7 @@
         "@types/ws": "^8.18.1",
         "level": "^10.0.0",
         "material-symbols": "^0.39.4",
+        "monaco-editor": "^0.55.1",
         "reflect-metadata": "^0.2.2",
         "sockjs": "^0.3.24",
         "typedi": "^0.10.0",

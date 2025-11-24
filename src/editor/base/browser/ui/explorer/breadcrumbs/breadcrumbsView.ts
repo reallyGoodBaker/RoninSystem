@@ -5,6 +5,7 @@ import { replicable } from '../../../replicator'
 import { FileDescUtils } from "../files/filesLayout"
 
 const [ breadcrumbs, setBreadcrumbs ] = replicable('explorer.cwd', 'assets')
+const [ _, setContentPath ] = replicable('explorer.content', '')
 
 export class BreadcrumbUtils {
     static _breadcrumbs = breadcrumbs()
@@ -18,6 +19,8 @@ export class BreadcrumbUtils {
     static push(name: string) {
         if (FileDescUtils.isDir(name))
             setBreadcrumbs(this._breadcrumbs + '/' + name)
+        else
+            setContentPath(this._breadcrumbs + '/' + name)
     }
 
     static pop() {

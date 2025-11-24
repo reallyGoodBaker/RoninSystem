@@ -13,4 +13,10 @@ export const Replicables: string[] = [
     'app.alert.buttons',
     'app.alert.result',
     'app.alert.visible',
+
+    // Content
+    'content.path',
+    'content.type',
+    'content.text',
+    'content.buffer',
 ]
