@@ -15,6 +15,7 @@ export function parseConf() {
     return {
         resourceName: confObj['asset.resource.name'],
         behaviorName: confObj['asset.behavior.name'],
+        root: confObj['minecraft.root.directory'],
         ...confObj
     }
 }

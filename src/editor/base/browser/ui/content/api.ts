@@ -1,6 +1,5 @@
-import { createSignal } from "solid-js/types/server/reactive.js"
 import { replicable } from "../../replicator"
-import { createEffect } from "@editor/base/common/responsive"
+import { createEffect, createSignal } from "@editor/base/common/responsive"
 import { EncodeDecoder } from "@editor/base/common/encodeDecoder"
 
 export interface IContent<T> {

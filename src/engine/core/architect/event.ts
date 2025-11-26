@@ -109,7 +109,7 @@ export class EventSignal<A extends unknown[] = unknown[]> {
 export class EventDelegate<A extends unknown[] = unknown[]> {
     private onNotify_?: (...args: A) => void
 
-    bind = (callback: (...args: A) => void, thisArg: any) => {
+    bind = (callback: (...args: A) => void, thisArg?: any) => {
         if (thisArg) {
             this.onNotify_ = callback.bind(thisArg)
             return

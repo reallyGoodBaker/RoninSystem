@@ -1,8 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { parseConf } from './parser.js'
 
-const mcRoot = path.join(os.homedir(), 'AppData/Roaming/Minecraft Bedrock/Users/Shared/games/com.mojang')
+const { root } = parseConf()
+
+const mcRoot = root ?? path.join(os.homedir(), 'AppData/Roaming/Minecraft Bedrock/Users/Shared/games/com.mojang')
 
 const devBehaviorPath = path.join(mcRoot, 'development_behavior_packs')
 const devResourcePath = path.join(mcRoot, 'development_resource_packs')

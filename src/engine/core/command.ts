@@ -1,6 +1,6 @@
 import { CommandPermissionLevel, CustomCommandResult, CustomCommandOrigin, CustomCommandParameter, CustomCommandParamType, CustomCommandRegistry, CustomCommandStatus } from "@minecraft/server"
-import { commandToken } from "../tools/command_tokenizer/dist/command_tokenizer"
-import { Enum, Required, Optional } from '../tools/command_tokenizer/dist/command_tokenizer'
+import { commandToken } from "../../tools/command_tokenizer/dist/command_tokenizer"
+import { Enum, Required, Optional } from '../../tools/command_tokenizer/dist/command_tokenizer'
 
 export interface CommandOptions {
     name: string

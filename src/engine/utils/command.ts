@@ -1,7 +1,7 @@
 import { CommandPermissionLevel, CustomCommand, CustomCommandOrigin } from "@minecraft/server"
 import { CommandHandlerOptions, CommandOptions, CommandRegistry } from "@ronin/core/command"
-import { Enum, Required, Optional } from '../tools/command_tokenizer/dist/command_tokenizer'
-import { StringParamType } from '../core/command';
+import { Enum, Required, Optional } from '../../tools/command_tokenizer/dist/command_tokenizer'
+import { StringParamType } from '../core/command'
 
 enum ParamType {
     Enum = 0,

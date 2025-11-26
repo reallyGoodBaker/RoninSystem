@@ -1,0 +1,14 @@
+[
+    {
+        "tick": 8,
+        "name": "notifyDamage"
+    },
+    {
+        "tick": 2,
+        "name": "stateBlockingStart"
+    },
+    {
+        "tick": 4,
+        "name": "stateBlockingEnd"
+    }
+]

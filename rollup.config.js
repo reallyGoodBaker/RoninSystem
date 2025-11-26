@@ -19,12 +19,12 @@ export default [
             ts(),
             nodeResolve(),
             typescriptPaths(),
-            terser(),
+            // terser(),
             syncAssetsPlugin(),
         ],
         external: [
             "@minecraft/server",
             "@minecraft/server-ui"
         ],
-    }
+    },
 ]
