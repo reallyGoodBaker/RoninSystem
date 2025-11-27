@@ -1,5 +1,6 @@
 import { Pawn } from "@ronin/core/architect/pawn"
 import type { AnimLayers } from "./anim"
+import { EventDelegate } from "@ronin/core/architect/event"
 
 export enum AnimPlayingType {
     Once = 0,
@@ -12,12 +13,21 @@ export interface AnimSeqEvent {
     name: string
 }
 
+export interface AnimSequenceCtor {
+    new(): AnimSequence
+    animation: string
+}
+
 export abstract class AnimSequence {
     abstract readonly animation: string
     abstract readonly duration: number
     abstract readonly playingType: AnimPlayingType
     abstract readonly override: boolean
-    abstract readonly animNotifies: AnimSeqEvent[]
+    abstract readonly animNotifEvents: AnimSeqEvent[]
+    abstract readonly notifies: Record<string, number>
+    abstract readonly states: Record<string, number[]>
+
+    readonly Onfinished = new EventDelegate<[boolean]>()
 
     ticksPlayed: number = 0
     isPlaying: boolean = false
@@ -26,6 +36,16 @@ export abstract class AnimSequence {
     protected resetState() {
         this.ticksPlayed = 0
         this.isPlaying = false
+    }
+
+    restore() {
+        this.resetState()
+        this.finished = false
+    }
+
+    restart(layers: AnimLayers) {
+        this.restore()
+        this.start(layers)
     }
 
     start(layers: AnimLayers) {
@@ -38,7 +58,8 @@ export abstract class AnimSequence {
 
         const actor = <Pawn> layers.animComp.actor
         actor.entity?.playAnimation(this.animation, {
-            nextState: 'unknown',
+            nextState: 'default',
+            blendOutTime: 0.1,
         })
 
         this.onStart(layers)
@@ -47,6 +68,7 @@ export abstract class AnimSequence {
     stop() {
         this.resetState()
         this.onStopped(true)
+        this.Onfinished.call(true)
     }
 
     update(layers: AnimLayers) {
@@ -63,6 +85,7 @@ export abstract class AnimSequence {
                 this.resetState()
                 this.onEnd()
                 this.onStopped(false)
+                this.Onfinished.call(false)
                 return
             }
 
@@ -79,7 +102,7 @@ export abstract class AnimSequence {
     }
 
     findNotify(tick: number): AnimSeqEvent | undefined {
-        return this.animNotifies.find(e => e.tick === tick)
+        return this.animNotifEvents.find(e => e.tick === tick)
     }
 
     callNotify(tick: number) {

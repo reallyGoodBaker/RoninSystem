@@ -4,22 +4,50 @@ import { RoninPlugin } from "@ronin/plugins/ronin"
 import { StateTreePlugin } from "@ronin/plugins/stateTree"
 import { StateTree } from "@ronin/plugins/stateTree/stateTree"
 import { StateTreeConfKey } from "@ronin/plugins/stateTree/stateTreeComponent"
-
 import { AnimationSequencePlugin } from "@ronin/plugins/animSeq/animPlugin"
 import { RoninPlayerController } from "@ronin/plugins/ronin/roninController"
 import { RoninModPlayer } from "@ronin/plugins/ronin/player"
 import { AnimationSequenceComponent } from "@ronin/plugins/animSeq/anim"
 import { MarieKSequence } from "./generated/ss/marieK"
 import { registerPlayerController } from "@ronin/core/architect/config"
-import { profiler } from "@ronin/core/profiler"
+import { MariePSequence } from "./generated/ss/marieP"
+import { MariePpSequence } from "./generated/ss/mariePp"
 
 class MyController extends RoninPlayerController {
     setupInput(): void {
         super.setupInput()
-        this.OnAttack.bind(press => {
-            profiler.debug("Attack Pressed")
-            const player = <RoninModPlayer> this.getPawn()
-            const animComp = player.getComponent(AnimationSequenceComponent)
+
+        const player = <RoninModPlayer> this.getPawn()
+        const animComp = player.getComponent(AnimationSequenceComponent)
+
+        let attackCount = 0
+
+        this.OnAttack.bind(async press => {
+            if (!press) {
+                return
+            }
+
+            const current = ++attackCount
+
+            switch (current) {
+                case 1:
+                    animComp.playAnimation(MariePSequence.animation)
+                    break
+
+                case 2:
+                    await animComp.playAnimation(MariePpSequence.animation)
+                    attackCount = 0
+                    break
+            
+                default:
+                    break
+            }
+        })
+
+        this.OnInteract.bind(press => {
+            if (!press) {
+                return
+            }
             animComp.playAnimation(MarieKSequence.animation)
         })
     }

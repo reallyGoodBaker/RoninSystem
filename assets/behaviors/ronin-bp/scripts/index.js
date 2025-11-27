@@ -2843,7 +2843,7 @@ const PROFIER_CONFIG = {
     }
 };
 
-const { TOKENS: TOKENS$2, FAST, SLOW, FAST_COLOR, SLOW_COLOR, MEDIUM_COLOR, NUM_FIXED } = PROFIER_CONFIG;
+const { TOKENS: TOKENS$3, FAST, SLOW, FAST_COLOR, SLOW_COLOR, MEDIUM_COLOR, NUM_FIXED } = PROFIER_CONFIG;
 var profiler;
 (function (profiler) {
     function _write(level, message) {
@@ -2867,15 +2867,15 @@ var profiler;
         _write(level, message);
     }
     const rawTypes = ['string', 'number', 'boolean', 'bigint', 'undefined', 'symbol'];
-    const objField = (type, k, v) => `  ${TOKENS$2.ID}${k}§r: ${type}${type === TOKENS$2.STR ? `'${v}'` : v}§r`;
-    const fnField = (name, isGetter = false) => `  ${isGetter ? TOKENS$2.GET : TOKENS$2.FN}${isGetter ? 'get ' : ''}${name ?? '[anonymous]'}§r()`;
+    const objField = (type, k, v) => `  ${TOKENS$3.ID}${k}§r: ${type}${type === TOKENS$3.STR ? `'${v}'` : v}§r`;
+    const fnField = (name, isGetter = false) => `  ${isGetter ? TOKENS$3.GET : TOKENS$3.FN}${isGetter ? 'get ' : ''}${name ?? '[anonymous]'}§r()`;
     const rawTypeMapping = {
-        string: TOKENS$2.STR,
-        number: TOKENS$2.NUM,
-        boolean: TOKENS$2.BOOL,
-        bigint: TOKENS$2.NUM,
+        string: TOKENS$3.STR,
+        number: TOKENS$3.NUM,
+        boolean: TOKENS$3.BOOL,
+        bigint: TOKENS$3.NUM,
         undefined: '§7',
-        symbol: TOKENS$2.STR
+        symbol: TOKENS$3.STR
     };
     const ignoredRawTypes = [
         Object.prototype,
@@ -2938,12 +2938,12 @@ var profiler;
                         return objectInfo.push(fnField(v.name));
                     }
                     if ('nameTag' in v) {
-                        return objectInfo.push(objField(TOKENS$2.ENT, k, `${v.typeId.replace('minecraft:', '')}{name=${v.nameTag}}`));
+                        return objectInfo.push(objField(TOKENS$3.ENT, k, `${v.typeId.replace('minecraft:', '')}{name=${v.nameTag}}`));
                     }
                     if ('typeId' in v) {
-                        return objectInfo.push(objField(TOKENS$2.ENT, k, v.typeId.replace('minecraft:', '')));
+                        return objectInfo.push(objField(TOKENS$3.ENT, k, v.typeId.replace('minecraft:', '')));
                     }
-                    return objectInfo.push(objField(TOKENS$2.CLASS, k, v?.constructor?.name || '{}'));
+                    return objectInfo.push(objField(TOKENS$3.CLASS, k, v?.constructor?.name || '{}'));
                 });
             } while (!ignoredRawTypes.includes(current = Reflect.getPrototypeOf(current)));
             objectInfo.unshift(`${m?.constructor?.name || ''} {}:`);
@@ -2977,7 +2977,7 @@ var profiler;
         const result = fn(...args);
         const end = Date.now();
         const duration = end - start;
-        info(`Task ${TOKENS$2.FN}${name}§r executed in ${duration < FAST ? FAST_COLOR
+        info(`Task ${TOKENS$3.FN}${name}§r executed in ${duration < FAST ? FAST_COLOR
             : duration < SLOW ? MEDIUM_COLOR
                 : SLOW_COLOR}${duration.toFixed(NUM_FIXED)}ms`);
         return result;
@@ -3113,7 +3113,6 @@ var PredefinedInput;
 class InputComponent extends EventComponent {
     static canUsePlayerSwing = Boolean(world.afterEvents.playerSwingStart);
     static inputStacks = new Map();
-    static swingPlayers = new Set();
     allowTicking = true;
     static {
         // 原生玩家按键输入 (跳跃/潜行)
@@ -3161,6 +3160,20 @@ class InputComponent extends EventComponent {
                 });
             }, 2);
         }
+        function quickRestoreAttack(id) {
+            InputComponent.inputStacks.get(id)?.push({
+                button: 'Attack',
+                value: true,
+                ticks: system.currentTick,
+            });
+            system.runTimeout(() => {
+                InputComponent.inputStacks.get(id)?.push({
+                    button: 'Attack',
+                    value: false,
+                    ticks: system.currentTick,
+                });
+            }, 2);
+        }
         world.afterEvents.playerPlaceBlock.subscribe(ev => quickRestoreInteract(ev.player.id));
         world.afterEvents.playerInteractWithBlock.subscribe(ev => quickRestoreInteract(ev.player.id));
         world.afterEvents.playerInteractWithEntity.subscribe(ev => quickRestoreInteract(ev.player.id));
@@ -3172,30 +3185,12 @@ class InputComponent extends EventComponent {
                 ticks: system.currentTick,
             });
         });
-        // 模拟玩家按键输入 (攻击/冲刺)
-        // 兼容 PlayerSwingStart 事件
+        // 模拟玩家按键输入 (冲刺)
         system.afterEvents.scriptEventReceive.subscribe(({ sourceEntity, id }) => {
             if (!sourceEntity) {
                 return;
             }
             switch (id) {
-                case 'ss:drawStart': {
-                    if (this.canUsePlayerSwing)
-                        return;
-                    // return InputComponent.inputStacks.get(sourceEntity.id)?.push({
-                    //     button: 'Attack',
-                    //     value: true,
-                    //     unreliableAttack: true, // 模拟攻击输入不可靠
-                    //     ticks: system.currentTick,
-                    // })
-                    this.swingPlayers.add(sourceEntity.id);
-                }
-                case 'ss:drawEnd':
-                    return InputComponent.inputStacks.get(sourceEntity.id)?.push({
-                        button: 'Attack',
-                        value: false,
-                        ticks: system.currentTick,
-                    });
                 case 'ss:sprintEnd':
                     return InputComponent.inputStacks.get(sourceEntity.id)?.push({
                         button: 'Sprint',
@@ -3211,27 +3206,11 @@ class InputComponent extends EventComponent {
             }
         });
         if (this.canUsePlayerSwing) {
-            // world.afterEvents.playerSwingStart.subscribe(ev => InputComponent.inputStacks.get(ev.player.id)?.push({
-            //     button: 'Attack',
-            //     value: true,
-            //     ticks: system.currentTick,
-            // }), { heldItemOption: HeldItemOption.AnyItem })
-            // world.afterEvents.playerSwingStart.subscribe(ev => InputComponent.inputStacks.get(ev.player.id)?.push({
-            //     button: 'Attack',
-            //     value: true,
-            //     ticks: system.currentTick,
-            // }), { heldItemOption: HeldItemOption.NoItem })
-            world.afterEvents.playerSwingStart.subscribe(ev => this.swingPlayers.add(ev.player.id), { heldItemOption: HeldItemOption.AnyItem });
-            world.afterEvents.playerSwingStart.subscribe(ev => this.swingPlayers.add(ev.player.id), { heldItemOption: HeldItemOption.NoItem });
+            world.afterEvents.playerSwingStart.subscribe(ev => quickRestoreAttack(ev.player.id), { heldItemOption: HeldItemOption.AnyItem });
+            world.afterEvents.playerSwingStart.subscribe(ev => quickRestoreAttack(ev.player.id), { heldItemOption: HeldItemOption.NoItem });
         }
         // 原生玩家攻击输入
-        world.beforeEvents.playerBreakBlock.subscribe(ev => {
-            return InputComponent.inputStacks.get(ev.player.id)?.push({
-                button: 'Attack',
-                value: true,
-                ticks: system.currentTick,
-            });
-        });
+        world.beforeEvents.playerBreakBlock.subscribe(ev => quickRestoreAttack(ev.player.id));
     }
     get bindActor() {
         return this.actor.getPawn();
@@ -3313,18 +3292,7 @@ class InputComponent extends EventComponent {
         if (!stack) {
             return;
         }
-        let swingInputed = InputComponent.swingPlayers.has(actorId);
         for (const { button, value, ticks } of stack) {
-            // 不可信的左键操作可以由右键触发，用这种方式排除
-            // 这将导致无法在按住右键的情况下使用左键
-            if (swingInputed) {
-                InputComponent.swingPlayers.delete(actorId);
-                const interact = this.inputMapping.Interact;
-                if (interact.value) {
-                    swingInputed = false;
-                    continue;
-                }
-            }
             // 更新输入状态
             const localInput = this.inputMapping[button];
             if (localInput.value !== value) {
@@ -3333,10 +3301,6 @@ class InputComponent extends EventComponent {
                 localInput.lastUpdate = ticks;
                 this.trigger(button, value, dt);
             }
-        }
-        // 左键输入没有被过滤掉，说明是可信的
-        if (swingInputed) {
-            this.trigger('Attack', true, 0);
         }
         stack.length = 0;
     }
@@ -3498,7 +3462,7 @@ class SpawnConfig {
     }
 }
 
-const { TOKENS: TOKENS$1 } = PROFIER_CONFIG;
+const { TOKENS: TOKENS$2 } = PROFIER_CONFIG;
 class Application extends EventInstigator {
     actors = new Map();
     spawnConfig = SpawnConfig.getInst();
@@ -3743,7 +3707,7 @@ class ApplicationCommands {
     }
     show_plugins() {
         const messages = Array.from(Application.getInst().plugins.values())
-            .map(({ name, description }) => `\n${TOKENS$1.ID}${name}§r: ${TOKENS$1.STR}${description}`);
+            .map(({ name, description }) => `\n${TOKENS$2.ID}${name}§r: ${TOKENS$2.STR}${description}`);
         profiler.info(`已加载${messages.length}个插件:`, ...messages);
     }
 }
@@ -4435,7 +4399,7 @@ class StateTree extends EventInstigator {
     }
 }
 
-const { TOKENS } = PROFIER_CONFIG;
+const { TOKENS: TOKENS$1 } = PROFIER_CONFIG;
 function getStateTree(app, entity) {
     return app.getActor(entity.id)?.getComponent(StateTreeComponent)?.stateTree;
 }
@@ -4480,7 +4444,7 @@ class StateTreePlugin {
             `\n当前任务: ${profiler.format(stateTree.getExecutingTasks())}`);
         profiler.registerCustomTypePrinter(State, state => {
             const { name, payload, keepCurrentState, tryTransitionEveryTick, transitionOnFinished, taskNames } = state;
-            return `${TOKENS.ID + name + TOKENS.R}\n` + profiler.format({
+            return `${TOKENS$1.ID + name + TOKENS$1.R}\n` + profiler.format({
                 name, payload, keepCurrentState,
                 tryTransitionEveryTick, transitionOnFinished, taskNames
             });
@@ -4516,6 +4480,86 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], StateTreePlugin.prototype, "state_tree_tasks", null);
 
+var AnimPlayingType;
+(function (AnimPlayingType) {
+    AnimPlayingType[AnimPlayingType["Once"] = 0] = "Once";
+    AnimPlayingType[AnimPlayingType["Loop"] = 1] = "Loop";
+    AnimPlayingType[AnimPlayingType["HoldOnLastFrame"] = 2] = "HoldOnLastFrame";
+})(AnimPlayingType || (AnimPlayingType = {}));
+class AnimSequence {
+    Onfinished = new EventDelegate();
+    ticksPlayed = 0;
+    isPlaying = false;
+    finished = false;
+    resetState() {
+        this.ticksPlayed = 0;
+        this.isPlaying = false;
+    }
+    restore() {
+        this.resetState();
+        this.finished = false;
+    }
+    restart(layers) {
+        this.restore();
+        this.start(layers);
+    }
+    start(layers) {
+        if (this.isPlaying) {
+            return;
+        }
+        this.ticksPlayed = 0;
+        this.isPlaying = true;
+        const actor = layers.animComp.actor;
+        actor.entity?.playAnimation(this.animation, {
+            nextState: 'default',
+            blendOutTime: 0.1,
+        });
+        this.onStart(layers);
+    }
+    stop() {
+        this.resetState();
+        this.onStopped(true);
+        this.Onfinished.call(true);
+    }
+    update(layers) {
+        if (!this.isPlaying) {
+            return;
+        }
+        this.onUpdate(layers);
+        const offsetTick = this.ticksPlayed++;
+        if (offsetTick == this.duration) {
+            if (this.playingType === AnimPlayingType.Once) {
+                this.finished = true;
+                this.resetState();
+                this.onEnd();
+                this.onStopped(false);
+                this.Onfinished.call(false);
+                return;
+            }
+            if (this.playingType === AnimPlayingType.HoldOnLastFrame) {
+                this.resetState();
+                this.onEnd();
+                return;
+            }
+            this.ticksPlayed = 0;
+        }
+        this.callNotify(offsetTick);
+    }
+    findNotify(tick) {
+        return this.animNotifEvents.find(e => e.tick === tick);
+    }
+    callNotify(tick) {
+        const methodName = this.findNotify(tick)?.name;
+        if (methodName in this) {
+            this[methodName]();
+        }
+    }
+    onUpdate(layers) { }
+    onStart(layers) { }
+    onEnd() { }
+    onStopped(canceled) { }
+}
+
 /**
  * 动画层
  *
@@ -4529,8 +4573,12 @@ class AnimLayers {
     _layer1 = new Set();
     _layer2 = new Set();
     layers = [this._layer2, this._layer1, this._layer0];
+    _playingAnims = [];
     constructor(animComp) {
         this.animComp = animComp;
+    }
+    getLayer(index) {
+        return this[`_layer${index}`];
     }
     /**
      * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
@@ -4542,6 +4590,10 @@ class AnimLayers {
             this.clearLayer(layer);
         }
         this[`_layer${layer}`].add(animSeq);
+        const { promise, resolve } = Promise.withResolvers();
+        animSeq.Onfinished.bind(resolve);
+        this._playingAnims.push(animSeq);
+        return promise;
     }
     playAnimSeqList(layer = 0, ...animSeqList) {
         for (const animSeq of animSeqList) {
@@ -4568,7 +4620,7 @@ class AnimLayers {
     }
     update() {
         // 从高优先级到低优先级直到找到可播放的动画层
-        const index = this.layers.findIndex(layer => !this.proccedAnimLayer(layer));
+        const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer));
         // 如果找到可播放的动画层，则停止该层之后的动画层
         const overridedAnimLayers = this.layers.slice(index + 1);
         overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()));
@@ -4580,109 +4632,78 @@ class AnimLayers {
         for (const animSeq of layer) {
             if (animSeq.finished) {
                 layer.delete(animSeq);
+                animSeq.restore();
+                continue;
             }
             if (!animSeq.isPlaying) {
                 animSeq.start(this);
+                continue;
             }
             animSeq.update(this);
         }
         return true;
     }
+    getPlayingAnimation() {
+        return this._layer0.values().next().value;
+    }
 }
 class AnimationSequenceComponent extends Component {
     allowTicking = true;
     animLayers = new AnimLayers(this);
-    static animSeqs = new Map();
+    animSeqs = new Map();
+    static animSeqRegistry = new Map();
     update() {
         this.animLayers.update();
     }
-    playAnimation(animName, layer = 0) {
-        const animSeq = AnimationSequenceComponent.animSeqs.get(animName);
+    getOrCreateAnimSeq(cls) {
+        const animSeq = this.animSeqs.get(cls);
+        if (!animSeq) {
+            const seq = Reflect.construct(cls, []);
+            this.animSeqs.set(cls, seq);
+            return seq;
+        }
+        return animSeq;
+    }
+    async playAnimation(animName, layer = 0) {
+        const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName);
         if (animSeq) {
-            this.animLayers.playAnimSeq(animSeq, layer);
+            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), layer);
         }
     }
     stopAnimation(animName) {
-        const animSeq = AnimationSequenceComponent.animSeqs.get(animName);
+        const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName);
         if (animSeq) {
-            this.animLayers.stopAnimSeq(animSeq);
+            this.animLayers.stopAnimSeq(this.getOrCreateAnimSeq(animSeq));
         }
+    }
+    getAnimation(animName) {
+        const ctor = AnimationSequenceComponent.animSeqRegistry.get(animName);
+        return ctor ? this.getOrCreateAnimSeq(ctor) : null;
+    }
+    getAnimationNames() {
+        return Array.from(AnimationSequenceComponent.animSeqRegistry.keys());
+    }
+    clearAnimation() {
+        this.animLayers.clearAll();
+    }
+    getPlayingAnimation() {
+        return this.animLayers.getPlayingAnimation();
     }
 }
 function AnimationSequence(cls) {
-    const animSeq = Reflect.construct(cls, []);
-    AnimationSequenceComponent.animSeqs.set(animSeq.animation, animSeq);
+    AnimationSequenceComponent.animSeqRegistry.set(cls.animation, cls);
 }
 
-var AnimPlayingType;
-(function (AnimPlayingType) {
-    AnimPlayingType[AnimPlayingType["Once"] = 0] = "Once";
-    AnimPlayingType[AnimPlayingType["Loop"] = 1] = "Loop";
-    AnimPlayingType[AnimPlayingType["HoldOnLastFrame"] = 2] = "HoldOnLastFrame";
-})(AnimPlayingType || (AnimPlayingType = {}));
-class AnimSequence {
-    ticksPlayed = 0;
-    isPlaying = false;
-    finished = false;
-    resetState() {
-        this.ticksPlayed = 0;
-        this.isPlaying = false;
-    }
-    start(layers) {
-        if (this.isPlaying) {
-            return;
-        }
-        this.ticksPlayed = 0;
-        this.isPlaying = true;
-        const actor = layers.animComp.actor;
-        actor.entity?.playAnimation(this.animation, {
-            nextState: 'unknown',
-        });
-        this.onStart(layers);
-    }
-    stop() {
-        this.resetState();
-        this.onStopped(true);
-    }
-    update(layers) {
-        if (!this.isPlaying) {
-            return;
-        }
-        this.onUpdate(layers);
-        const offsetTick = this.ticksPlayed++;
-        if (offsetTick == this.duration) {
-            if (this.playingType === AnimPlayingType.Once) {
-                this.finished = true;
-                this.resetState();
-                this.onEnd();
-                this.onStopped(false);
-                return;
-            }
-            if (this.playingType === AnimPlayingType.HoldOnLastFrame) {
-                this.resetState();
-                this.onEnd();
-                return;
-            }
-            this.ticksPlayed = 0;
-        }
-        this.callNotify(offsetTick);
-    }
-    findNotify(tick) {
-        return this.animNotifies.find(e => e.tick === tick);
-    }
-    callNotify(tick) {
-        const methodName = this.findNotify(tick)?.name;
-        if (methodName in this) {
-            this[methodName]();
-        }
-    }
-    onUpdate(layers) { }
-    onStart(layers) { }
-    onEnd() { }
-    onStopped(canceled) { }
-}
-
-var animNotifies = [
+var notifies$2 = {
+	damage: 0.38
+};
+var states$2 = {
+	blocking: [
+		0.1,
+		0.2
+	]
+};
+var events$2 = [
 	{
 		tick: 8,
 		name: "notifyDamage"
@@ -4696,14 +4717,20 @@ var animNotifies = [
 		name: "stateBlockingEnd"
 	}
 ];
+var dataAsset$2 = {
+	notifies: notifies$2,
+	states: states$2,
+	events: events$2};
 
 let MarieKSequence = class MarieKSequence extends AnimSequence {
     static animation = 'animation.ss.marie.k';
     animation = 'animation.ss.marie.k';
     duration = 15;
-    playingType = 2;
+    playingType = AnimPlayingType.Once;
     override = true;
-    animNotifies = animNotifies;
+    animNotifEvents = dataAsset$2.events;
+    notifies = dataAsset$2.notifies;
+    states = dataAsset$2.states;
     notifyDamage() {
     }
     stateBlockingStart() {
@@ -4715,21 +4742,174 @@ MarieKSequence = __decorate([
     AnimationSequence
 ], MarieKSequence);
 
+var notifies$1 = {
+	damage: 0.23
+};
+var states$1 = {
+};
+var events$1 = [
+	{
+		tick: 5,
+		name: "notifyDamage"
+	}
+];
+var dataAsset$1 = {
+	notifies: notifies$1,
+	states: states$1,
+	events: events$1};
+
+let MariePSequence = class MariePSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.p';
+    animation = 'animation.ss.marie.p';
+    duration = 15;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$1.events;
+    notifies = dataAsset$1.notifies;
+    states = dataAsset$1.states;
+    notifyDamage() {
+    }
+};
+MariePSequence = __decorate([
+    AnimationSequence
+], MariePSequence);
+
+var notifies = {
+	damage: 0.23
+};
+var states = {
+};
+var events = [
+	{
+		tick: 5,
+		name: "notifyDamage"
+	}
+];
+var dataAsset = {
+	notifies: notifies,
+	states: states,
+	events: events};
+
+let MariePpSequence = class MariePpSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.pp';
+    animation = 'animation.ss.marie.pp';
+    duration = 18;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset.events;
+    notifies = dataAsset.notifies;
+    states = dataAsset.states;
+    notifyDamage() {
+    }
+};
+MariePpSequence = __decorate([
+    AnimationSequence
+], MariePpSequence);
+
+const { TOKENS } = PROFIER_CONFIG;
+function getAnimSeqComp(en) {
+    return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent);
+}
 class AnimationSequencePlugin {
     name = 'animSeq';
     description = '动画序列插件，用于管理动画';
     startModule(app) {
         registerPlayerComponent(AnimationSequenceComponent);
     }
+    anim_seq_layer(entities, layer = 0) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                profiler.info(...animComp.animLayers.getLayer(layer));
+            }
+        });
+    }
+    anim_seq_playing(entities, size = 20) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                const animSeq = animComp.getPlayingAnimation();
+                if (!animSeq) {
+                    return;
+                }
+                const { animation, duration, playingType, notifies, states } = animSeq;
+                const scale = size / duration;
+                const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
+                    `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
+                    Object.entries(notifies).map(([name, t]) => {
+                        const tick = t * 20;
+                        const place = Math.floor(tick * scale);
+                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}◆${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - 1))} ${TOKENS.R}${name}`;
+                    }).join('\n') + '\n' +
+                    Object.entries(states).map(([name, [start, end]]) => {
+                        const startTick = start * 20;
+                        const endTick = end * 20;
+                        const place = Math.floor(startTick * scale);
+                        const stateLength = Math.floor((endTick - startTick) * scale);
+                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}+${'-'.repeat(stateLength)}+${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - stateLength - 2))} ${TOKENS.R}${name}`;
+                    }).join('\n');
+                profiler.info(text);
+            }
+        });
+    }
+    anim_seq_defined(entities) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                profiler.info(animComp.getAnimationNames());
+            }
+        });
+    }
 }
+__decorate([
+    CustomCommand('查看动画层'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Optional('int')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_layer", null);
+__decorate([
+    CustomCommand('查看当前动画'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Optional('int')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_playing", null);
+__decorate([
+    CustomCommand('查看动画名称'),
+    __param(0, Param.Required('actor')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_defined", null);
 
 class MyController extends RoninPlayerController {
     setupInput() {
         super.setupInput();
-        this.OnAttack.bind(press => {
-            profiler.debug("Attack Pressed");
-            const player = this.getPawn();
-            const animComp = player.getComponent(AnimationSequenceComponent);
+        const player = this.getPawn();
+        const animComp = player.getComponent(AnimationSequenceComponent);
+        let attackCount = 0;
+        this.OnAttack.bind(async (press) => {
+            if (!press) {
+                return;
+            }
+            const current = ++attackCount;
+            switch (current) {
+                case 1:
+                    animComp.playAnimation(MariePSequence.animation);
+                    break;
+                case 2:
+                    await animComp.playAnimation(MariePpSequence.animation);
+                    attackCount = 0;
+                    break;
+            }
+        });
+        this.OnInteract.bind(press => {
+            if (!press) {
+                return;
+            }
             animComp.playAnimation(MarieKSequence.animation);
         });
     }

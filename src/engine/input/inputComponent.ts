@@ -2,6 +2,7 @@ import { world, InputButton, ButtonState, Vector2, system, Player, EquipmentSlot
 import { PlayerController } from '@ronin/core/architect/controller'
 import { EventComponent } from '@ronin/core/architect/event'
 import { Pawn } from '@ronin/core/architect/pawn'
+import { profiler } from '@ronin/core/profiler'
 
 export interface InputMapping {
     Jump: boolean
@@ -67,7 +68,6 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
     static readonly canUsePlayerSwing = Boolean(world.afterEvents.playerSwingStart)
 
     private static readonly inputStacks = new Map<string, InputElement[]>()
-    private static readonly swingPlayers = new Set<string>()
 
     allowTicking: boolean = true
 
@@ -123,6 +123,22 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
             }, 2)
         }
 
+        function quickRestoreAttack(id: string) {
+            InputComponent.inputStacks.get(id)?.push({
+                button: 'Attack',
+                value: true,
+                ticks: system.currentTick,
+            })
+
+            system.runTimeout(() => {
+                InputComponent.inputStacks.get(id)?.push({
+                    button: 'Attack',
+                    value: false,
+                    ticks: system.currentTick,
+                })
+            }, 2)
+        }
+
         world.afterEvents.playerPlaceBlock.subscribe(ev => quickRestoreInteract(ev.player.id))
         world.afterEvents.playerInteractWithBlock.subscribe(ev => quickRestoreInteract(ev.player.id))
         world.afterEvents.playerInteractWithEntity.subscribe(ev => quickRestoreInteract(ev.player.id))
@@ -136,34 +152,13 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
             })
         })
 
-        // 模拟玩家按键输入 (攻击/冲刺)
-        // 兼容 PlayerSwingStart 事件
+        // 模拟玩家按键输入 (冲刺)
         system.afterEvents.scriptEventReceive.subscribe(({ sourceEntity, id }) => {
             if (!sourceEntity) {
                 return
             }
 
             switch (id) {
-                case 'ss:drawStart': {
-                    if (this.canUsePlayerSwing)
-                        return
-
-                    // return InputComponent.inputStacks.get(sourceEntity.id)?.push({
-                    //     button: 'Attack',
-                    //     value: true,
-                    //     unreliableAttack: true, // 模拟攻击输入不可靠
-                    //     ticks: system.currentTick,
-                    // })
-                    this.swingPlayers.add(sourceEntity.id)
-                }
-
-                case 'ss:drawEnd':
-                    return InputComponent.inputStacks.get(sourceEntity.id)?.push({
-                        button: 'Attack',
-                        value: false,
-                        ticks: system.currentTick,
-                    })
-
                 case 'ss:sprintEnd':
                     return InputComponent.inputStacks.get(sourceEntity.id)?.push({
                         button: 'Sprint',
@@ -181,29 +176,12 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
         })
 
         if (this.canUsePlayerSwing) {
-            // world.afterEvents.playerSwingStart.subscribe(ev => InputComponent.inputStacks.get(ev.player.id)?.push({
-            //     button: 'Attack',
-            //     value: true,
-            //     ticks: system.currentTick,
-            // }), { heldItemOption: HeldItemOption.AnyItem })
-
-            // world.afterEvents.playerSwingStart.subscribe(ev => InputComponent.inputStacks.get(ev.player.id)?.push({
-            //     button: 'Attack',
-            //     value: true,
-            //     ticks: system.currentTick,
-            // }), { heldItemOption: HeldItemOption.NoItem })
-            world.afterEvents.playerSwingStart.subscribe(ev => this.swingPlayers.add(ev.player.id), { heldItemOption: HeldItemOption.AnyItem })
-            world.afterEvents.playerSwingStart.subscribe(ev => this.swingPlayers.add(ev.player.id), { heldItemOption: HeldItemOption.NoItem })
+            world.afterEvents.playerSwingStart.subscribe(ev => quickRestoreAttack(ev.player.id), { heldItemOption: HeldItemOption.AnyItem })
+            world.afterEvents.playerSwingStart.subscribe(ev => quickRestoreAttack(ev.player.id), { heldItemOption: HeldItemOption.NoItem })
         }
 
         // 原生玩家攻击输入
-        world.beforeEvents.playerBreakBlock.subscribe(ev => {
-            return InputComponent.inputStacks.get(ev.player.id)?.push({
-                button: 'Attack',
-                value: true,
-                ticks: system.currentTick,
-            })
-        })
+        world.beforeEvents.playerBreakBlock.subscribe(ev => quickRestoreAttack(ev.player.id))
     }
 
     get bindActor() {
@@ -308,19 +286,7 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
             return
         }
 
-        let swingInputed = InputComponent.swingPlayers.has(actorId)
         for (const { button, value, ticks } of stack) {
-            // 不可信的左键操作可以由右键触发，用这种方式排除
-            // 这将导致无法在按住右键的情况下使用左键
-            if (swingInputed) {
-                InputComponent.swingPlayers.delete(actorId)
-                const interact = this.inputMapping.Interact
-                if (interact.value) {
-                    swingInputed = false
-                    continue
-                }
-            }
-
             // 更新输入状态
             const localInput = this.inputMapping[button]
             if (localInput.value !== value) {
@@ -329,11 +295,6 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
                 localInput.lastUpdate = ticks
                 this.trigger(button, value, dt)
             }
-        }
-
-        // 左键输入没有被过滤掉，说明是可信的
-        if (swingInputed) {
-            this.trigger('Attack', true, 0)
         }
 
         stack.length = 0

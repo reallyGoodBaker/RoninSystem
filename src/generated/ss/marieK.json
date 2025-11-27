@@ -1,14 +1,26 @@
-[
-    {
-        "tick": 8,
-        "name": "notifyDamage"
+{
+    "notifies": {
+        "damage": 0.38
     },
-    {
-        "tick": 2,
-        "name": "stateBlockingStart"
+    "states": {
+        "blocking": [
+            0.1,
+            0.2
+        ]
     },
-    {
-        "tick": 4,
-        "name": "stateBlockingEnd"
-    }
-]
+    "events": [
+        {
+            "tick": 8,
+            "name": "notifyDamage"
+        },
+        {
+            "tick": 2,
+            "name": "stateBlockingStart"
+        },
+        {
+            "tick": 4,
+            "name": "stateBlockingEnd"
+        }
+    ],
+    "dataAsset": "marieK.ts"
+}

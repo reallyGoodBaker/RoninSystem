@@ -1,12 +1,12 @@
 import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/animSeq/sequence'
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
-import dataAsset from './marieK.json'
+import dataAsset from './mariePp.json'
 
 @AnimationSequence
-export class MarieKSequence extends AnimSequence {
-    static readonly animation = 'animation.ss.marie.k'
-    readonly animation = 'animation.ss.marie.k'
-    readonly duration = 15
+export class MariePpSequence extends AnimSequence {
+    static readonly animation = 'animation.ss.marie.pp'
+    readonly animation = 'animation.ss.marie.pp'
+    readonly duration = 18
     readonly playingType: AnimPlayingType = AnimPlayingType.Once
     readonly override = true
     readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
@@ -15,14 +15,6 @@ export class MarieKSequence extends AnimSequence {
 
 
     protected notifyDamage() {
-
-    }
-
-    protected stateBlockingStart() {
-
-    }
-
-    protected stateBlockingEnd() {
 
     }
 }

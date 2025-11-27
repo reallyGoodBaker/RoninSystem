@@ -63,13 +63,23 @@ interface AnimSeqEvent {
     name: string
 }
 
-function getAnimSeqEvents(animSeq: AnimSeqMeta) {
+interface AnimSeqData {
+    notifies: Record<string, number>
+    states: Record<string, [number, number]>
+    events: AnimSeqEvent[]
+}
+
+function getAnimSeqData(animSeq: AnimSeqMeta) {
     const { notifies, states } = animSeq
-    const animEvents: AnimSeqEvent[] = []
+    const animSeqData: AnimSeqData = {
+        notifies: animSeq.notifies,
+        states: animSeq.states,
+        events: []
+    }
 
     for (const k in notifies) {
         const time = notifies[k]
-        animEvents.push({
+        animSeqData.events.push({
             tick: Math.ceil(time * 20),
             name: 'notify' + upperCamel(k)
         })
@@ -77,17 +87,17 @@ function getAnimSeqEvents(animSeq: AnimSeqMeta) {
 
     for (const k in states) {
         const [ start, end ] = states[k]
-        animEvents.push({
+        animSeqData.events.push({
             tick: Math.ceil(start * 20),
             name: `state${upperCamel(k)}Start`
         })
-        animEvents.push({
+        animSeqData.events.push({
             tick: Math.ceil(end * 20),
             name: `state${upperCamel(k)}End`
         })
     }
 
-    return animEvents
+    return animSeqData
 }
 
 function methodCode({ name }: AnimSeqEvent) {
@@ -100,30 +110,32 @@ function methodCode({ name }: AnimSeqEvent) {
 function animSeqCode(animSeqMeta: AnimSeqMeta) {
     const animMeta = animSeqMeta.animation
     const { className, namespace } = getAnimGenMeta(animMeta.name)
-    const animEvents = getAnimSeqEvents(animSeqMeta)
+    const animSeqData = getAnimSeqData(animSeqMeta)
     const fileName = lowerCamel(className)
     const code =
 `import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/animSeq/sequence'
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
-import animNotifies from './${fileName}.json'
+import dataAsset from './${fileName}.json'
 
 @AnimationSequence
 export class ${className}Sequence extends AnimSequence {
-    static animation = '${animMeta.name}'
+    static readonly animation = '${animMeta.name}'
     readonly animation = '${animMeta.name}'
     readonly duration = ${Math.floor(animMeta.duration * 20)}
-    readonly playingType: AnimPlayingType = ${animMeta.playingType}
+    readonly playingType: AnimPlayingType = AnimPlayingType.${AnimPlayingType[animMeta.playingType]}
     readonly override = ${animMeta.override}
-    readonly animNotifies = animNotifies as AnimSeqEvent[]
+    readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
+    readonly notifies: Record<string, number> = dataAsset.notifies
+    readonly states: Record<string, number[]> = dataAsset.states
 
-${animEvents.map(methodCode).join('\n')}
+${animSeqData.events.map(methodCode).join('\n')}
 }
 `
     return {
         folder: namespace,
         code,
         fileName,
-        events: animEvents
+        data: animSeqData
     }
 }
 
@@ -136,7 +148,11 @@ function getAnimPlayingType(loop: boolean | string) {
         return AnimPlayingType.Once
     }
 
-    return AnimPlayingType.HoldOnLastFrame
+    if (loop == 'hold_on_last_frame') {
+        return AnimPlayingType.HoldOnLastFrame
+    }
+
+    return AnimPlayingType.Once
 }
 
 function getAnimSeqMeta() {
@@ -195,13 +211,15 @@ function getAnimSeqMeta() {
 }
 
 
-function writeCode(folder: string, fileName: string, code: string, events: AnimSeqEvent[], exportPath: string) {
+function writeCode(folder: string, fileName: string, code: string, data: AnimSeqData, exportPath: string) {
     const filePath = path.join(RealRoot, 'src/generated', folder, fileName)
     if (!fs.existsSync(filePath)) {
         fs.mkdirSync(path.dirname(filePath), { recursive: true })
     }
     fs.writeFileSync(filePath + '.ts', code)
-    fs.writeFileSync(filePath + '.json', JSON.stringify(events, null, 4))
+    const editorData = <any> data
+    editorData.dataAsset = fileName + '.ts'
+    fs.writeFileSync(filePath + '.json', JSON.stringify(editorData, null, 4))
     fs.appendFileSync(
         exportPath,
         `\nimport '${path.join('@/generated', folder, fileName).replace(/\\/g, '/')}'`
@@ -210,7 +228,7 @@ function writeCode(folder: string, fileName: string, code: string, events: AnimS
 
 
 export function generateCode() {
-    const exportPath = path.join(RealRoot, 'src/engine/plugins/animSeq/animPlugin.ts')
+    const exportPath = path.join(RealRoot, 'src/engine/plugins/animSeq/autoImport.ts')
     fs.writeFileSync(
         exportPath,
         fs.readFileSync(exportPath).toString().replace(
@@ -219,7 +237,7 @@ export function generateCode() {
         )
     )
     for (const meta of Object.values(getAnimSeqMeta())) {
-        const { folder, fileName, code, events } = animSeqCode(meta)
-        writeCode(folder, fileName, code, events, exportPath)
+        const { folder, fileName, code, data } = animSeqCode(meta)
+        writeCode(folder, fileName, code, data, exportPath)
     }
 }

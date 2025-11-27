@@ -1,6 +1,6 @@
 import { Component } from '@ronin/core/architect/component'
-import { ConstructorOf } from '@ronin/core/types'
-import { AnimSequence } from '@ronin/plugins/animSeq/sequence'
+import { AnimSequence, AnimSequenceCtor } from '@ronin/plugins/animSeq/sequence'
+import { profiler } from '@ronin/core/profiler'
 
 
 /**
@@ -15,10 +15,15 @@ export class AnimLayers {
     private _layer1 = new Set<AnimSequence>()
     private _layer2 = new Set<AnimSequence>()
     private readonly layers = [this._layer2, this._layer1, this._layer0]
+    private _playingAnims: AnimSequence[] = []
 
     constructor(
         readonly animComp: AnimationSequenceComponent
     ) {}
+
+    getLayer(index: 0 | 1 | 2) {
+        return this[`_layer${index}`]
+    }
 
     /**
      * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
@@ -30,6 +35,10 @@ export class AnimLayers {
             this.clearLayer(layer)
         }
         this[`_layer${layer}`].add(animSeq)
+        const { promise, resolve } = Promise.withResolvers()
+        animSeq.Onfinished.bind(resolve)
+        this._playingAnims.push(animSeq)
+        return promise
     }
 
     playAnimSeqList(layer: 0 | 1 | 2 = 0, ...animSeqList: AnimSequence[]) {
@@ -62,7 +71,7 @@ export class AnimLayers {
 
     update() {
         // 从高优先级到低优先级直到找到可播放的动画层
-        const index = this.layers.findIndex(layer => !this.proccedAnimLayer(layer))
+        const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer))
         // 如果找到可播放的动画层，则停止该层之后的动画层
         const overridedAnimLayers = this.layers.slice(index + 1)
         overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()))
@@ -76,10 +85,13 @@ export class AnimLayers {
         for (const animSeq of layer) {
             if (animSeq.finished) {
                 layer.delete(animSeq)
+                animSeq.restore()
+                continue
             }
 
             if (!animSeq.isPlaying) {
                 animSeq.start(this)
+                continue
             }
 
             animSeq.update(this)
@@ -87,35 +99,67 @@ export class AnimLayers {
 
         return true
     }
+
+    getPlayingAnimation() {
+        return this._layer0.values().next().value
+    }
 }
 
 export class AnimationSequenceComponent extends Component {
     readonly allowTicking: boolean = true
     readonly animLayers: AnimLayers = new AnimLayers(this)
+    readonly animSeqs = new Map<AnimSequenceCtor, AnimSequence>()
 
-    static readonly animSeqs = new Map<string, AnimSequence>()
+    static readonly animSeqRegistry = new Map<string, AnimSequenceCtor>()
 
     update() {
         this.animLayers.update()
     }
 
-    playAnimation(animName: string, layer: 0 | 1 | 2 = 0) {
-        const animSeq = AnimationSequenceComponent.animSeqs.get(animName)
+    protected getOrCreateAnimSeq(cls: AnimSequenceCtor) {
+        const animSeq = this.animSeqs.get(cls)
+        if (!animSeq) {
+            const seq = Reflect.construct(cls, []) as AnimSequence
+            this.animSeqs.set(cls, seq)
+            return seq
+        }
+
+        return animSeq
+    }
+
+    async playAnimation(animName: string, layer: 0 | 1 | 2 = 0) {
+        const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName)
         if (animSeq) {
-            this.animLayers.playAnimSeq(animSeq, layer)
+            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), layer)
         }
     }
 
     stopAnimation(animName: string) {
-        const animSeq = AnimationSequenceComponent.animSeqs.get(animName)
+        const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName)
         if (animSeq) {
-            this.animLayers.stopAnimSeq(animSeq)
+            this.animLayers.stopAnimSeq(this.getOrCreateAnimSeq(animSeq))
         }
+    }
+
+    getAnimation(animName: string) {
+        const ctor = AnimationSequenceComponent.animSeqRegistry.get(animName)
+        return ctor ? this.getOrCreateAnimSeq(ctor) : null
+    }
+
+    getAnimationNames() {
+        return Array.from(AnimationSequenceComponent.animSeqRegistry.keys())
+    }
+
+    clearAnimation() {
+        this.animLayers.clearAll()
+    }
+
+    getPlayingAnimation() {
+        return this.animLayers.getPlayingAnimation()
     }
 
 }
 
-export function AnimationSequence(cls: ConstructorOf<AnimSequence>) {
-    const animSeq = Reflect.construct(cls, [])
-    AnimationSequenceComponent.animSeqs.set(animSeq.animation, animSeq)
+export function AnimationSequence(cls: AnimSequenceCtor) {
+    AnimationSequenceComponent.animSeqRegistry.set(cls.animation, cls)
 }

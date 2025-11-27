@@ -3,6 +3,13 @@
         "animation.ss.marie.k": {
             "blocking": [0.1, 0.2],
             "damage": 0.38
+        },
+        "animation.ss.marie.p": {
+            "damage": 0.23
+        }
+        ,
+        "animation.ss.marie.pp": {
+            "damage": 0.23
         }
     }
 }
