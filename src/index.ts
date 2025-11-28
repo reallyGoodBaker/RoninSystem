@@ -31,11 +31,11 @@ class MyController extends RoninPlayerController {
 
             switch (current) {
                 case 1:
-                    animComp.playAnimation(MariePSequence.animation)
+                    animComp.playAnimSeq(MariePSequence.animation)
                     break
 
                 case 2:
-                    await animComp.playAnimation(MariePpSequence.animation)
+                    await animComp.playAnimSeq(MariePpSequence.animation)
                     attackCount = 0
                     break
             
@@ -48,7 +48,7 @@ class MyController extends RoninPlayerController {
             if (!press) {
                 return
             }
-            animComp.playAnimation(MarieKSequence.animation)
+            animComp.playAnimSeq(MarieKSequence.animation)
         })
     }
 }

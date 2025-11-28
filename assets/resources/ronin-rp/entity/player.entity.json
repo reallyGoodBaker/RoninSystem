@@ -38,7 +38,8 @@
                     "variable.item_scale": "public",
                     "variable.waist_item_scale": "public",
                     "variable.item_scale_offhand": "public",
-                    "variable.waist_item_scale_1": "public"
+                    "variable.waist_item_scale_1": "public",
+                    "variable.leg_front": "public"
                 },
                 "initialize": [
                     "v.arm_detector = query.bone_aabb('leftArm');",
@@ -69,7 +70,8 @@
                     "v.rerot = 0;",
                     "v.arm_status = 0;",
 
-                    "v.head_yaw = query.body_y_rotation;"
+                    "v.head_yaw = query.body_y_rotation;",
+                    "v.leg_front = 1;"
                 ],
                 "pre_animation": [
                     "variable.arm_detector = query.bone_aabb('leftArm');",
@@ -113,7 +115,6 @@
                 "crawling.legs": "animation.player.crawl.legs",
                 "riding.arms": "animation.player.riding.arms",
                 "riding.legs": "animation.player.riding.legs",
-                "holding": "animation.player.holding",
                 "brandish_spear": "animation.humanoid.brandish_spear",
                 "holding_spyglass": "animation.humanoid.holding_spyglass",
                 "charging": "animation.humanoid.charging",
@@ -153,15 +154,19 @@
 
                 "general.stand": "animation.general.stand",
                 "custom.walk": "animation.player.custom.walk",
+                "holding": "animation.player.holding",
+                "custom.walk2": "animation.player.custom.walk2",
+                "holding2": "animation.player.holding2",
                 "controller.move": "controller.animation.player.move",
-                "custom.jump": "animation.player.custom.jump",
+                "landing.left": "animation.player.custom.landing.left",
+                "landing.right": "animation.player.custom.landing.right",
+                "jump.right": "animation.player.custom.jump.right",
+                "jump.left": "animation.player.custom.jump.left",
                 "custom.fall": "animation.player.custom.fall",
                 "custom.stand": "animation.player.move.stand",
+                "jump.in_space": "animation.player.custom.jump.in_space",
+                "landing.in_space": "animation.player.custom.landing.in_space",
 
-                "pr.stand": "animation.posture.right.stand",
-                "pr.walk_front": "animation.posture.right.walk_front",
-                "pl.stand": "animation.posture.left.stand",
-                "pl.walk_front": "animation.posture.left.walk_front",
                 "waist_weapon": "animation.hold.waist_weapon"
             },
             "particle_effects": {

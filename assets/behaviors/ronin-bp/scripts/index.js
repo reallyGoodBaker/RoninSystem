@@ -2376,6 +2376,27 @@ class EventComponent extends Component {
     off = EventComponent.prototype.removeListener;
 }
 /**
+ * 一个事件 Observable，可以绑定多个回调函数，当事件触发时，所有绑定的回调函数都会被调用
+ */
+class EventSignal {
+    _observers = [];
+    addListener = (callback) => {
+        this._observers.push(callback);
+    };
+    /**
+     * 尽可能不使用 off，因为 off 性能较差
+     * @param callback
+     */
+    removeListener = (callback) => {
+        this._observers.splice(this._observers.indexOf(callback), 1);
+    };
+    trigger = (...args) => {
+        this._observers.forEach(callback => callback.apply(undefined, args));
+    };
+    on = EventSignal.prototype.addListener;
+    off = EventSignal.prototype.removeListener;
+}
+/**
  * 一个事件委托，只能绑定一个回调函数
  */
 class EventDelegate {
@@ -4487,7 +4508,7 @@ var AnimPlayingType;
     AnimPlayingType[AnimPlayingType["HoldOnLastFrame"] = 2] = "HoldOnLastFrame";
 })(AnimPlayingType || (AnimPlayingType = {}));
 class AnimSequence {
-    Onfinished = new EventDelegate();
+    Onfinished = new EventSignal();
     ticksPlayed = 0;
     isPlaying = false;
     finished = false;
@@ -4519,7 +4540,7 @@ class AnimSequence {
     stop() {
         this.resetState();
         this.onStopped(true);
-        this.Onfinished.call(true);
+        this.Onfinished.trigger(true);
     }
     update(layers) {
         if (!this.isPlaying) {
@@ -4533,7 +4554,7 @@ class AnimSequence {
                 this.resetState();
                 this.onEnd();
                 this.onStopped(false);
-                this.Onfinished.call(false);
+                this.Onfinished.trigger(false);
                 return;
             }
             if (this.playingType === AnimPlayingType.HoldOnLastFrame) {
@@ -4569,58 +4590,58 @@ class AnimSequence {
  */
 class AnimLayers {
     animComp;
-    _layer0 = new Set();
-    _layer1 = new Set();
-    _layer2 = new Set();
-    layers = [this._layer2, this._layer1, this._layer0];
-    _playingAnims = [];
+    baseLayer = new Set();
+    overrideLayer = new Set();
+    layers = [this.overrideLayer, this.baseLayer];
+    _playingAnims = new Set();
     constructor(animComp) {
         this.animComp = animComp;
     }
-    getLayer(index) {
-        return this[`_layer${index}`];
+    getLayer(base = true) {
+        return base ? this.baseLayer : this.overrideLayer;
     }
     /**
      * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
-     * @param animSeq
-     * @param layer
      */
-    playAnimSeq(animSeq, layer = 0) {
+    playAnimSeq(animSeq, base = true) {
         if (animSeq.override) {
-            this.clearLayer(layer);
+            this.clearLayer(base);
         }
-        this[`_layer${layer}`].add(animSeq);
+        this.getLayer(base).add(animSeq);
         const { promise, resolve } = Promise.withResolvers();
-        animSeq.Onfinished.bind(resolve);
-        this._playingAnims.push(animSeq);
+        const cb = (v) => {
+            resolve(v);
+            animSeq.Onfinished.off(cb);
+        };
+        animSeq.Onfinished.on(cb);
+        this._playingAnims.add(animSeq);
         return promise;
     }
-    playAnimSeqList(layer = 0, ...animSeqList) {
+    playAnimSeqList(layer = true, ...animSeqList) {
         for (const animSeq of animSeqList) {
             this.playAnimSeq(animSeq, layer);
         }
     }
     stopAnimSeq(animSeq) {
         animSeq.stop();
-        this._layer0.delete(animSeq);
-        this._layer1.delete(animSeq);
-        this._layer2.delete(animSeq);
+        this.getLayer(true).delete(animSeq);
+        this.getLayer(false).delete(animSeq);
     }
-    clearLayer(layer = 0) {
-        const animLayer = this[`_layer${layer}`];
+    clearLayer(base = true) {
+        const animLayer = this.getLayer(base);
         for (const animSeq of animLayer) {
             animSeq.stop();
         }
         animLayer.clear();
     }
     clearAll() {
-        this.clearLayer(0);
-        this.clearLayer(1);
-        this.clearLayer(2);
+        this.clearLayer(true);
+        this.clearLayer(false);
     }
     update() {
         // 从高优先级到低优先级直到找到可播放的动画层
         const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer));
+        // TODO: 应该修改为暂停
         // 如果找到可播放的动画层，则停止该层之后的动画层
         const overridedAnimLayers = this.layers.slice(index + 1);
         overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()));
@@ -4644,7 +4665,7 @@ class AnimLayers {
         return true;
     }
     getPlayingAnimation() {
-        return this._layer0.values().next().value;
+        return this._playingAnims.values().next().value;
     }
 }
 class AnimationSequenceComponent extends Component {
@@ -4664,10 +4685,10 @@ class AnimationSequenceComponent extends Component {
         }
         return animSeq;
     }
-    async playAnimation(animName, layer = 0) {
+    async playAnimSeq(animName, base = true) {
         const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName);
         if (animSeq) {
-            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), layer);
+            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), base);
         }
     }
     stopAnimation(animName) {
@@ -4898,10 +4919,10 @@ class MyController extends RoninPlayerController {
             const current = ++attackCount;
             switch (current) {
                 case 1:
-                    animComp.playAnimation(MariePSequence.animation);
+                    animComp.playAnimSeq(MariePSequence.animation);
                     break;
                 case 2:
-                    await animComp.playAnimation(MariePpSequence.animation);
+                    await animComp.playAnimSeq(MariePpSequence.animation);
                     attackCount = 0;
                     break;
             }
@@ -4910,7 +4931,7 @@ class MyController extends RoninPlayerController {
             if (!press) {
                 return;
             }
-            animComp.playAnimation(MarieKSequence.animation);
+            animComp.playAnimSeq(MarieKSequence.animation);
         });
     }
 }

@@ -1,6 +1,6 @@
 import { Pawn } from "@ronin/core/architect/pawn"
 import type { AnimLayers } from "./anim"
-import { EventDelegate } from "@ronin/core/architect/event"
+import { EventSignal } from "@ronin/core/architect/event"
 
 export enum AnimPlayingType {
     Once = 0,
@@ -27,7 +27,7 @@ export abstract class AnimSequence {
     abstract readonly notifies: Record<string, number>
     abstract readonly states: Record<string, number[]>
 
-    readonly Onfinished = new EventDelegate<[boolean]>()
+    readonly Onfinished = new EventSignal<[boolean]>()
 
     ticksPlayed: number = 0
     isPlaying: boolean = false
@@ -68,7 +68,7 @@ export abstract class AnimSequence {
     stop() {
         this.resetState()
         this.onStopped(true)
-        this.Onfinished.call(true)
+        this.Onfinished.trigger(true)
     }
 
     update(layers: AnimLayers) {
@@ -85,7 +85,7 @@ export abstract class AnimSequence {
                 this.resetState()
                 this.onEnd()
                 this.onStopped(false)
-                this.Onfinished.call(false)
+                this.Onfinished.trigger(false)
                 return
             }
 

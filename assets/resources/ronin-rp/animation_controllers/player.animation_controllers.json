@@ -55,65 +55,163 @@
 			"initial_state": "idle",
 			"states": {
 				"idle": {
-					"animations": [
-						{"pr.stand": "v.posture == 1"},
-						{"custom.stand": "v.posture == 0"},
-						{"pl.stand": "v.posture == 2"}
-					],
+                    "animations": [
+                        "custom.stand"
+                    ],
 					"transitions": [
-						{"walk": "q.modified_move_speed > 0.1"},
-						{"jump": "q.is_jumping"},
+						{"walkL": "q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "q.modified_move_speed > 0.1 && v.leg_front == 2"},
+						{"jumpL": "q.is_jumping && v.leg_front == 1 && q.is_moving"},
+						{"jumpR": "q.is_jumping && v.leg_front == 2 && q.is_moving"},
+                        {"jumpInSpace": "q.is_jumping && !q.is_moving"},
 						{"falling": "!q.is_on_ground"}
 					],
 					"blend_transition": 0.2,
 					"blend_via_shortest_path": true
 				},
-				"walk": {
+				"walkL": {
 					"animations": [
-						{"custom.walk": "v.posture == 0"},
-						{"pr.walk_front": "v.posture == 1"},
-						{"pl.walk_front": "v.posture == 2"}
+						{"custom.walk": "q.is_on_ground"}
 					],
 					"transitions": [
 						{"idle": "q.modified_move_speed < 0.1"},
-						{"running": "q.is_sprinting"},
-						{"jump": "q.is_jumping"},
+						{"runningL": "q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_sprinting && v.leg_front == 2"},
+						{"jumpL": "q.is_jumping && v.leg_front == 1"},
+						{"jumpR": "q.is_jumping && v.leg_front == 2"},
 						{"falling": "!q.is_on_ground"}
 					],
 					"blend_transition": 0.2,
 					"blend_via_shortest_path": true
 				},
-				"running": {
+                "walkR": {
+					"animations": [
+						{"custom.walk2": "q.is_on_ground"}
+					],
+					"transitions": [
+						{"idle": "q.modified_move_speed < 0.1"},
+						{"runningL": "q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_sprinting && v.leg_front == 2"},
+						{"jumpL": "q.is_jumping && v.leg_front == 1"},
+						{"jumpR": "q.is_jumping && v.leg_front == 2"},
+						{"falling": "!q.is_on_ground"}
+					],
+					"blend_transition": 0.2,
+					"blend_via_shortest_path": true
+				},
+				"runningL": {
 					"animations": [
 						{"holding": "q.is_on_ground"}
 					],
 					"transitions": [
-						{"walk": "!q.is_sprinting"},
-						{"jump": "q.is_jumping"},
+                        {"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+						{"jumpL": "q.is_jumping && v.leg_front == 1"},
+						{"jumpR": "q.is_jumping && v.leg_front == 2"},
 						{"falling": "!q.is_on_ground"}
 					],
 					"blend_transition": 0.2,
 					"blend_via_shortest_path": true
 				},
-				"jump": {
+                "runningR": {
 					"animations": [
-						{"custom.jump": "!q.is_gliding"}
+						{"holding2": "q.is_on_ground"}
 					],
 					"transitions": [
-						{"running": "q.is_on_ground && q.ground_speed >= 0.5 && q.is_sprinting"},
-						{"falling": "q.vertical_speed < -8"},
-						{"walk": "q.is_on_ground &&  !q.is_sprinting"}
+						{"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+						{"jumpL": "q.is_jumping && v.leg_front == 1"},
+						{"jumpR": "q.is_jumping && v.leg_front == 2"},
+						{"falling": "!q.is_on_ground"}
 					],
 					"blend_transition": 0.2,
 					"blend_via_shortest_path": true
 				},
+				"jumpR": {
+					"animations": [
+						{"jump.right": "!q.is_gliding"}
+					],
+					"transitions": [
+						{"landingL": "q.is_on_ground"},
+						{"falling": "q.vertical_speed < -8"}
+					],
+					"blend_transition": 0.2,
+					"blend_via_shortest_path": true
+				},
+                "jumpL": {
+					"animations": [
+						{"jump.left": "!q.is_gliding"}
+					],
+					"transitions": [
+                        {"landingR": "q.is_on_ground"},
+						{"falling": "q.vertical_speed < -8"}
+					],
+					"blend_transition": 0.2,
+					"blend_via_shortest_path": true
+				},
+                "jumpInSpace": {
+					"animations": [
+						{"jump.in_space": "!q.is_gliding"}
+					],
+					"transitions": [
+                        {"landingInSpace": "q.is_on_ground"},
+						{"falling": "q.vertical_speed < -8"}
+					],
+					"blend_transition": 0.2,
+					"blend_via_shortest_path": true
+				},
+                "landingL": {
+                    "animations": [
+						"landing.left"
+					],
+					"transitions": [
+						{"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+                        {"runningL": "q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_sprinting && v.leg_front == 2"},
+                        {"idle": "!q.is_moving"}
+					],
+					"blend_transition": 0.3,
+					"blend_via_shortest_path": true
+                },
+                "landingR": {
+                    "animations": [
+						"landing.right"
+					],
+					"transitions": [
+						{"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+                        {"runningL": "q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_sprinting && v.leg_front == 2"},
+                        {"idle": "!q.is_moving"}
+					],
+					"blend_transition": 0.3,
+					"blend_via_shortest_path": true
+                },
+                "landingInSpace": {
+                    "animations": [
+						"landing.in_space"
+					],
+					"transitions": [
+						{"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+                        {"runningL": "q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_sprinting && v.leg_front == 2"},
+                        {"idle": "!q.is_moving"}
+					],
+					"blend_transition":0.3,
+					"blend_via_shortest_path": true
+                },
 				"falling": {
 					"animations": ["custom.fall"],
 					"transitions": [
-						{"running": "q.is_on_ground &&  q.is_sprinting"},
-						{"walk": "q.is_on_ground  && !q.is_sprinting"}
+                        {"runningL": "q.is_on_ground && q.is_sprinting && v.leg_front == 1"},
+						{"runningR": "q.is_on_ground && q.is_sprinting && v.leg_front == 2"},
+						{"walkL": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 1"},
+						{"walkR": "!q.is_sprinting && q.modified_move_speed > 0.1 && v.leg_front == 2"},
+                        {"idle": "q.is_on_ground && q.modified_move_speed < 0.1 && !q.is_moving"}
 					],
-					"blend_transition": 0.2,
+					"blend_transition": 0.3,
 					"blend_via_shortest_path": true
 				}
 			}

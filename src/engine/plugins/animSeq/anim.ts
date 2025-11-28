@@ -1,6 +1,5 @@
 import { Component } from '@ronin/core/architect/component'
 import { AnimSequence, AnimSequenceCtor } from '@ronin/plugins/animSeq/sequence'
-import { profiler } from '@ronin/core/profiler'
 
 
 /**
@@ -11,37 +10,39 @@ import { profiler } from '@ronin/core/profiler'
  * 当更高优先级的动画层有动画播放时，低优先级动画层的动画会被中断。
  */
 export class AnimLayers {
-    private _layer0 = new Set<AnimSequence>()
-    private _layer1 = new Set<AnimSequence>()
-    private _layer2 = new Set<AnimSequence>()
-    private readonly layers = [this._layer2, this._layer1, this._layer0]
-    private _playingAnims: AnimSequence[] = []
+    private baseLayer = new Set<AnimSequence>()
+    private overrideLayer = new Set<AnimSequence>()
+    private readonly layers = [ this.overrideLayer, this.baseLayer ]
+    private _playingAnims = new Set<AnimSequence>()
 
     constructor(
         readonly animComp: AnimationSequenceComponent
     ) {}
 
-    getLayer(index: 0 | 1 | 2) {
-        return this[`_layer${index}`]
+    getLayer(base=true) {
+        return base ? this.baseLayer : this.overrideLayer
     }
 
     /**
      * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
-     * @param animSeq 
-     * @param layer 
      */
-    playAnimSeq(animSeq: AnimSequence, layer: 0 | 1 | 2 = 0) {
+    playAnimSeq(animSeq: AnimSequence, base=true) {
         if (animSeq.override) {
-            this.clearLayer(layer)
+            this.clearLayer(base)
         }
-        this[`_layer${layer}`].add(animSeq)
+
+        this.getLayer(base).add(animSeq)
         const { promise, resolve } = Promise.withResolvers()
-        animSeq.Onfinished.bind(resolve)
-        this._playingAnims.push(animSeq)
+        const cb = (v: boolean) => {
+            resolve(v)
+            animSeq.Onfinished.off(cb)
+        }
+        animSeq.Onfinished.on(cb)
+        this._playingAnims.add(animSeq)
         return promise
     }
 
-    playAnimSeqList(layer: 0 | 1 | 2 = 0, ...animSeqList: AnimSequence[]) {
+    playAnimSeqList(layer=true, ...animSeqList: AnimSequence[]) {
         for (const animSeq of animSeqList) {
             this.playAnimSeq(animSeq, layer)
         }
@@ -49,13 +50,12 @@ export class AnimLayers {
 
     stopAnimSeq(animSeq: AnimSequence) {
         animSeq.stop()
-        this._layer0.delete(animSeq)
-        this._layer1.delete(animSeq)
-        this._layer2.delete(animSeq)
+        this.getLayer(true).delete(animSeq)
+        this.getLayer(false).delete(animSeq)
     }
 
-    clearLayer(layer: 0 | 1 | 2 = 0) {
-        const animLayer = this[`_layer${layer}`]
+    clearLayer(base=true) {
+        const animLayer = this.getLayer(base)
         for (const animSeq of animLayer) {
             animSeq.stop()
         }
@@ -64,14 +64,14 @@ export class AnimLayers {
     }
 
     clearAll() {
-        this.clearLayer(0)
-        this.clearLayer(1)
-        this.clearLayer(2)
+        this.clearLayer(true)
+        this.clearLayer(false)
     }
 
     update() {
         // 从高优先级到低优先级直到找到可播放的动画层
         const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer))
+        // TODO: 应该修改为暂停
         // 如果找到可播放的动画层，则停止该层之后的动画层
         const overridedAnimLayers = this.layers.slice(index + 1)
         overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()))
@@ -101,7 +101,7 @@ export class AnimLayers {
     }
 
     getPlayingAnimation() {
-        return this._layer0.values().next().value
+        return this._playingAnims.values().next().value
     }
 }
 
@@ -127,10 +127,10 @@ export class AnimationSequenceComponent extends Component {
         return animSeq
     }
 
-    async playAnimation(animName: string, layer: 0 | 1 | 2 = 0) {
+    async playAnimSeq(animName: string, base=true) {
         const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName)
         if (animSeq) {
-            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), layer)
+            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), base)
         }
     }
 
