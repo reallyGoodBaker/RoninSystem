@@ -18,8 +18,8 @@ export abstract class Component<A extends Actor = Actor> {
     }
 
     /**
-     * 组件是否启用
-     * 若组件未启用，则不会调用 `Component.update()`
+     * 组件 ticking 是否启用
+     * 若组件 ticking 未启用，则不会调用 `Component.update()`
      */
     allowTicking = false
 

@@ -3,84 +3,87 @@ import { AnimSequence, AnimSequenceCtor } from '@ronin/plugins/animSeq/sequence'
 
 
 /**
- * 动画层
- * 
- * 工作方式：优先级从高到低，找到可播放的动画层，播放该层的动画。
- * 如果一个动画层内有多个动画，则同时混合播放所有该层内动画（动画的 override 不生效）。
- * 当更高优先级的动画层有动画播放时，低优先级动画层的动画会被中断。
+ * 简化的动画层管理器
+ * 优先级：overrideLayer > baseLayer
  */
 export class AnimLayers {
-    private baseLayer = new Set<AnimSequence>()
-    private overrideLayer = new Set<AnimSequence>()
-    private readonly layers = [ this.overrideLayer, this.baseLayer ]
-    private _playingAnims = new Set<AnimSequence>()
-
-    constructor(
-        readonly animComp: AnimationSequenceComponent
-    ) {}
-
-    getLayer(base=true) {
-        return base ? this.baseLayer : this.overrideLayer
+    private readonly layers = {
+        override: new Set<AnimSequence>(),
+        base: new Set<AnimSequence>()
     }
 
-    /**
-     * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
-     */
-    playAnimSeq(animSeq: AnimSequence, base=true) {
-        if (animSeq.override) {
-            this.clearLayer(base)
-        }
+    constructor(readonly animComp: AnimationSequenceComponent) {}
 
-        this.getLayer(base).add(animSeq)
-        const { promise, resolve } = Promise.withResolvers()
-        const cb = (v: boolean) => {
-            resolve(v)
-            animSeq.Onfinished.off(cb)
+    /**
+     * 播放动画序列
+     */
+    async playAnimSeq(animSeq: AnimSequence, base = true) {
+        const layer = base ? this.layers.base : this.layers.override
+        layer.add(animSeq)
+
+        if (!base) {
+            this.layers.base.forEach(seq => seq.stop())
         }
-        animSeq.Onfinished.on(cb)
-        this._playingAnims.add(animSeq)
+        
+        const { promise, resolve } = Promise.withResolvers<boolean>()
+        const onFinish = (canceled: boolean) => {
+            resolve(canceled)
+            animSeq.Onfinished.off(onFinish)
+        }
+        animSeq.Onfinished.on(onFinish)
+        
         return promise
     }
 
-    playAnimSeqList(layer=true, ...animSeqList: AnimSequence[]) {
-        for (const animSeq of animSeqList) {
-            this.playAnimSeq(animSeq, layer)
-        }
+    getLayer(base=true) {
+        return base ? this.layers.base : this.layers.override
     }
 
+    /**
+     * 播放多个动画序列
+     */
+    playAnimSeqList(base = true, ...animSeqList: AnimSequence[]) {
+        return Promise.all(animSeqList.map(seq => this.playAnimSeq(seq, base)))
+    }
+
+    /**
+     * 停止指定动画序列
+     */
     stopAnimSeq(animSeq: AnimSequence) {
         animSeq.stop()
-        this.getLayer(true).delete(animSeq)
-        this.getLayer(false).delete(animSeq)
+        this.layers.base.delete(animSeq)
+        this.layers.override.delete(animSeq)
     }
 
-    clearLayer(base=true) {
-        const animLayer = this.getLayer(base)
-        for (const animSeq of animLayer) {
-            animSeq.stop()
-        }
-
-        animLayer.clear()
+    /**
+     * 清空指定层
+     */
+    clearLayer(base = true) {
+        const layer = base ? this.layers.base : this.layers.override
+        layer.forEach(seq => seq.stop())
+        layer.clear()
     }
 
+    /**
+     * 清空所有层
+     */
     clearAll() {
         this.clearLayer(true)
         this.clearLayer(false)
     }
 
+
     update() {
-        // 从高优先级到低优先级直到找到可播放的动画层
-        const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer))
-        // TODO: 应该修改为暂停
-        // 如果找到可播放的动画层，则停止该层之后的动画层
-        const overridedAnimLayers = this.layers.slice(index + 1)
-        overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()))
+        // 按优先级处理图层
+        if (this.processLayer(this.layers.override)) return
+        this.processLayer(this.layers.base)
     }
 
-    protected proccedAnimLayer(layer: Set<AnimSequence>) {
-        if (!layer.size) {
-            return false
-        }
+    /**
+     * 处理单个动画层
+     */
+    private processLayer(layer: Set<AnimSequence>): boolean {
+        if (layer.size === 0) return false
 
         for (const animSeq of layer) {
             if (animSeq.finished) {
@@ -91,17 +94,20 @@ export class AnimLayers {
 
             if (!animSeq.isPlaying) {
                 animSeq.start(this)
-                continue
+            } else {
+                animSeq.update(this)
             }
-
-            animSeq.update(this)
         }
 
         return true
     }
 
+    /**
+     * 获取当前播放的动画（最高优先级）
+     */
     getPlayingAnimation() {
-        return this._playingAnims.values().next().value
+        return this.layers.override.values().next().value || 
+               this.layers.base.values().next().value
     }
 }
 
@@ -119,7 +125,7 @@ export class AnimationSequenceComponent extends Component {
     protected getOrCreateAnimSeq(cls: AnimSequenceCtor) {
         const animSeq = this.animSeqs.get(cls)
         if (!animSeq) {
-            const seq = Reflect.construct(cls, []) as AnimSequence
+            const seq = Reflect.construct(cls, [ this.animLayers ]) as AnimSequence
             this.animSeqs.set(cls, seq)
             return seq
         }

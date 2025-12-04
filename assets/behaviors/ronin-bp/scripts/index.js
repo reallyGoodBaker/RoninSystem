@@ -2284,8 +2284,8 @@ class Component {
         return ReflectConfig.unsafeCtxActor();
     }
     /**
-     * 组件是否启用
-     * 若组件未启用，则不会调用 `Component.update()`
+     * 组件 ticking 是否启用
+     * 若组件 ticking 未启用，则不会调用 `Component.update()`
      */
     allowTicking = false;
     /**
@@ -2343,8 +2343,8 @@ class EventInstigator {
             eventLinked.delete(callback);
         }
     }
-    on = EventInstigator.prototype.addListener;
-    off = EventInstigator.prototype.removeListener;
+    on = this.addListener;
+    off = this.removeListener;
 }
 /**
  * 一个 发布-订阅 模式的事件触发器类，是 {@link EventInstigator} 的 {@link Component} 实现
@@ -2372,8 +2372,8 @@ class EventComponent extends Component {
             eventLinked.delete(callback);
         }
     }
-    on = EventComponent.prototype.addListener;
-    off = EventComponent.prototype.removeListener;
+    on = this.addListener;
+    off = this.removeListener;
 }
 /**
  * 一个事件 Observable，可以绑定多个回调函数，当事件触发时，所有绑定的回调函数都会被调用
@@ -2393,8 +2393,8 @@ class EventSignal {
     trigger = (...args) => {
         this._observers.forEach(callback => callback.apply(undefined, args));
     };
-    on = EventSignal.prototype.addListener;
-    off = EventSignal.prototype.removeListener;
+    on = this.addListener;
+    off = this.removeListener;
 }
 /**
  * 一个事件委托，只能绑定一个回调函数
@@ -2861,6 +2861,21 @@ const PROFIER_CONFIG = {
         NUM: '§5',
         ENT: '§5',
         R: '§r'
+    },
+    ANIM: {
+        TRACK_WIDTH: 20,
+        TRACK_STYLE: '-',
+        TRACK_COLOR: '§7',
+        NOTIFY: {
+            COLOR: '§6',
+            POINT_STYLE: '◆',
+        },
+        STATE: {
+            BAR_COLOR: '§3',
+            BAR_STYLE: '-',
+            BAR_STYLE_START: '+',
+            BAR_STYLE_END: '+',
+        }
     }
 };
 
@@ -4501,6 +4516,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], StateTreePlugin.prototype, "state_tree_tasks", null);
 
+const { ANIM: { TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG;
 var AnimPlayingType;
 (function (AnimPlayingType) {
     AnimPlayingType[AnimPlayingType["Once"] = 0] = "Once";
@@ -4508,7 +4524,12 @@ var AnimPlayingType;
     AnimPlayingType[AnimPlayingType["HoldOnLastFrame"] = 2] = "HoldOnLastFrame";
 })(AnimPlayingType || (AnimPlayingType = {}));
 class AnimSequence {
+    layers;
     Onfinished = new EventSignal();
+    _animOwner;
+    constructor(layers) {
+        this.layers = layers;
+    }
     ticksPlayed = 0;
     isPlaying = false;
     finished = false;
@@ -4530,11 +4551,10 @@ class AnimSequence {
         }
         this.ticksPlayed = 0;
         this.isPlaying = true;
-        const actor = layers.animComp.actor;
-        actor.entity?.playAnimation(this.animation, {
-            nextState: 'default',
-            blendOutTime: 0.1,
-        });
+        const pawn = this.layers.animComp.actor;
+        this._animOwner = pawn;
+        profiler.info(this.animation, pawn.entity);
+        pawn.entity?.playAnimation(this.animation);
         this.onStart(layers);
     }
     stop() {
@@ -4575,81 +4595,110 @@ class AnimSequence {
             this[methodName]();
         }
     }
+    getOwner() {
+        return this._animOwner;
+    }
     onUpdate(layers) { }
     onStart(layers) { }
     onEnd() { }
     onStopped(canceled) { }
+    static {
+        profiler.registerCustomTypePrinter(AnimSequence, animSeq => {
+            const { animation, duration, playingType, notifies, states } = animSeq;
+            const scale = TRACK_WIDTH / duration;
+            const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
+                `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
+                Object.entries(notifies).map(([name, t]) => {
+                    const tick = t * 20;
+                    const place = Math.floor(tick * scale);
+                    return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${NOTIFY.COLOR}${NOTIFY.POINT_STYLE}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - 1))} ${TOKENS.R}${name}`;
+                }).join('\n') + '\n' +
+                Object.entries(states).map(([name, [start, end]]) => {
+                    const startTick = start * 20;
+                    const endTick = end * 20;
+                    const place = Math.floor(startTick * scale);
+                    const stateLength = Math.floor((endTick - startTick) * scale);
+                    return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${STATE.BAR_COLOR}${STATE.BAR_STYLE_START}${STATE.BAR_STYLE.repeat(stateLength)}${STATE.BAR_STYLE_END}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - stateLength - 2))} ${TOKENS.R}${name}`;
+                }).join('\n');
+            return text;
+        });
+    }
 }
 
 /**
- * 动画层
- *
- * 工作方式：优先级从高到低，找到可播放的动画层，播放该层的动画。
- * 如果一个动画层内有多个动画，则同时混合播放所有该层内动画（动画的 override 不生效）。
- * 当更高优先级的动画层有动画播放时，低优先级动画层的动画会被中断。
+ * 简化的动画层管理器
+ * 优先级：overrideLayer > baseLayer
  */
 class AnimLayers {
     animComp;
-    baseLayer = new Set();
-    overrideLayer = new Set();
-    layers = [this.overrideLayer, this.baseLayer];
-    _playingAnims = new Set();
+    layers = {
+        override: new Set(),
+        base: new Set()
+    };
     constructor(animComp) {
         this.animComp = animComp;
     }
-    getLayer(base = true) {
-        return base ? this.baseLayer : this.overrideLayer;
-    }
     /**
-     * animSeq 的 `override` 属性将会决定之前该层级播放的动画是否会被中断
+     * 播放动画序列
      */
-    playAnimSeq(animSeq, base = true) {
-        if (animSeq.override) {
-            this.clearLayer(base);
+    async playAnimSeq(animSeq, base = true) {
+        const layer = base ? this.layers.base : this.layers.override;
+        layer.add(animSeq);
+        if (!base) {
+            this.layers.base.forEach(seq => seq.stop());
         }
-        this.getLayer(base).add(animSeq);
         const { promise, resolve } = Promise.withResolvers();
-        const cb = (v) => {
-            resolve(v);
-            animSeq.Onfinished.off(cb);
+        const onFinish = (canceled) => {
+            resolve(canceled);
+            animSeq.Onfinished.off(onFinish);
         };
-        animSeq.Onfinished.on(cb);
-        this._playingAnims.add(animSeq);
+        animSeq.Onfinished.on(onFinish);
         return promise;
     }
-    playAnimSeqList(layer = true, ...animSeqList) {
-        for (const animSeq of animSeqList) {
-            this.playAnimSeq(animSeq, layer);
-        }
+    getLayer(base = true) {
+        return base ? this.layers.base : this.layers.override;
     }
+    /**
+     * 播放多个动画序列
+     */
+    playAnimSeqList(base = true, ...animSeqList) {
+        return Promise.all(animSeqList.map(seq => this.playAnimSeq(seq, base)));
+    }
+    /**
+     * 停止指定动画序列
+     */
     stopAnimSeq(animSeq) {
         animSeq.stop();
-        this.getLayer(true).delete(animSeq);
-        this.getLayer(false).delete(animSeq);
+        this.layers.base.delete(animSeq);
+        this.layers.override.delete(animSeq);
     }
+    /**
+     * 清空指定层
+     */
     clearLayer(base = true) {
-        const animLayer = this.getLayer(base);
-        for (const animSeq of animLayer) {
-            animSeq.stop();
-        }
-        animLayer.clear();
+        const layer = base ? this.layers.base : this.layers.override;
+        layer.forEach(seq => seq.stop());
+        layer.clear();
     }
+    /**
+     * 清空所有层
+     */
     clearAll() {
         this.clearLayer(true);
         this.clearLayer(false);
     }
     update() {
-        // 从高优先级到低优先级直到找到可播放的动画层
-        const index = this.layers.findIndex(layer => this.proccedAnimLayer(layer));
-        // TODO: 应该修改为暂停
-        // 如果找到可播放的动画层，则停止该层之后的动画层
-        const overridedAnimLayers = this.layers.slice(index + 1);
-        overridedAnimLayers.forEach(layer => layer.forEach(seq => seq.stop()));
+        // 按优先级处理图层
+        if (this.processLayer(this.layers.override))
+            return;
+        this.processLayer(this.layers.base);
     }
-    proccedAnimLayer(layer) {
-        if (!layer.size) {
+    /**
+     * 处理单个动画层
+     */
+    processLayer(layer) {
+        if (layer.size === 0)
             return false;
-        }
         for (const animSeq of layer) {
             if (animSeq.finished) {
                 layer.delete(animSeq);
@@ -4658,14 +4707,19 @@ class AnimLayers {
             }
             if (!animSeq.isPlaying) {
                 animSeq.start(this);
-                continue;
             }
-            animSeq.update(this);
+            else {
+                animSeq.update(this);
+            }
         }
         return true;
     }
+    /**
+     * 获取当前播放的动画（最高优先级）
+     */
     getPlayingAnimation() {
-        return this._playingAnims.values().next().value;
+        return this.layers.override.values().next().value ||
+            this.layers.base.values().next().value;
     }
 }
 class AnimationSequenceComponent extends Component {
@@ -4679,7 +4733,7 @@ class AnimationSequenceComponent extends Component {
     getOrCreateAnimSeq(cls) {
         const animSeq = this.animSeqs.get(cls);
         if (!animSeq) {
-            const seq = Reflect.construct(cls, []);
+            const seq = Reflect.construct(cls, [this.animLayers]);
             this.animSeqs.set(cls, seq);
             return seq;
         }
@@ -4827,7 +4881,6 @@ MariePpSequence = __decorate([
     AnimationSequence
 ], MariePpSequence);
 
-const { TOKENS } = PROFIER_CONFIG;
 function getAnimSeqComp(en) {
     return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent);
 }
@@ -4853,23 +4906,7 @@ class AnimationSequencePlugin {
                 if (!animSeq) {
                     return;
                 }
-                const { animation, duration, playingType, notifies, states } = animSeq;
-                const scale = size / duration;
-                const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
-                    `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
-                    Object.entries(notifies).map(([name, t]) => {
-                        const tick = t * 20;
-                        const place = Math.floor(tick * scale);
-                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}◆${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - 1))} ${TOKENS.R}${name}`;
-                    }).join('\n') + '\n' +
-                    Object.entries(states).map(([name, [start, end]]) => {
-                        const startTick = start * 20;
-                        const endTick = end * 20;
-                        const place = Math.floor(startTick * scale);
-                        const stateLength = Math.floor((endTick - startTick) * scale);
-                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}+${'-'.repeat(stateLength)}+${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - stateLength - 2))} ${TOKENS.R}${name}`;
-                    }).join('\n');
-                profiler.info(text);
+                profiler.info(animSeq);
             }
         });
     }
@@ -4927,11 +4964,13 @@ class MyController extends RoninPlayerController {
                     break;
             }
         });
-        this.OnInteract.bind(press => {
+        this.OnInteract.bind(async (press) => {
             if (!press) {
                 return;
             }
+            profiler.info('start kick');
             animComp.playAnimSeq(MarieKSequence.animation);
+            profiler.info(animComp.getPlayingAnimation());
         });
     }
 }

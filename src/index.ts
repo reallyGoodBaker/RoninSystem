@@ -12,6 +12,7 @@ import { MarieKSequence } from "./generated/ss/marieK"
 import { registerPlayerController } from "@ronin/core/architect/config"
 import { MariePSequence } from "./generated/ss/marieP"
 import { MariePpSequence } from "./generated/ss/mariePp"
+import { profiler } from "@ronin/core/profiler"
 
 class MyController extends RoninPlayerController {
     setupInput(): void {
@@ -44,11 +45,14 @@ class MyController extends RoninPlayerController {
             }
         })
 
-        this.OnInteract.bind(press => {
+        this.OnInteract.bind(async press => {
             if (!press) {
                 return
             }
+
+            profiler.info('start kick')
             animComp.playAnimSeq(MarieKSequence.animation)
+            profiler.info(animComp.getPlayingAnimation())
         })
     }
 }

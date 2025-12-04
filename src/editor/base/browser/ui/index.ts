@@ -1,7 +1,7 @@
 import { AppLayout } from "./app/appLayout"
 import { FileViewUtils } from "./explorer/files/fileView"
 import { Icon } from "./icon"
-import './content'
+// import './content'
 
 export function getAppRoot() {
     return document.getElementById('app') as HTMLElement

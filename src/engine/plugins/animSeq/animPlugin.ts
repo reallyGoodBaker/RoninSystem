@@ -6,10 +6,7 @@ import { AnimationSequenceComponent } from "./anim"
 import { profiler } from "@ronin/core/profiler"
 import { Entity } from "@minecraft/server"
 import { CustomCommand, Param } from '@ronin/utils/command'
-import { PROFIER_CONFIG } from '@ronin/config/profiler'
-import { AnimPlayingType } from './sequence'
 
-const { TOKENS } = PROFIER_CONFIG
 
 function getAnimSeqComp(en: Entity) {
     return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent)
@@ -50,24 +47,7 @@ export class AnimationSequencePlugin implements IPlugin {
                 if (!animSeq) {
                     return
                 }
-
-                const { animation, duration, playingType, notifies, states } = animSeq
-                const scale = size / duration
-                const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
-                    `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
-                    Object.entries(notifies).map(([ name, t ]) => {
-                        const tick = t * 20
-                        const place = Math.floor(tick * scale)
-                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}◆${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - 1))} ${TOKENS.R}${name}`
-                    }).join('\n') + '\n' +
-                    Object.entries(states).map(([ name, [ start, end ] ]) => {
-                        const startTick = start * 20
-                        const endTick = end * 20
-                        const place = Math.floor(startTick * scale)
-                        const stateLength = Math.floor((endTick - startTick) * scale)
-                        return `${TOKENS.NUM}${'-'.repeat(place)}${TOKENS.CLASS}+${'-'.repeat(stateLength)}+${TOKENS.NUM}${'-'.repeat(Math.max(0, size - place - stateLength - 2))} ${TOKENS.R}${name}`
-                    }).join('\n')
-                profiler.info(text)
+                profiler.info(animSeq)
             }
         })
     }

@@ -3,7 +3,7 @@ import { html } from "../view"
 import { Alert } from "./alert"
 import { createDraggingView, DragDirection } from "../gesture/dragging"
 import { createComputed } from "@editor/base/common/responsive"
-import { ContentView } from "../content/contentView"
+// import { ContentView } from "../content/contentView"
 
 export function AppLayout() {
     const [ explorerDraggingView, expSize ] = createDraggingView(DragDirection.East)
@@ -17,7 +17,7 @@ export function AppLayout() {
         </div>
         <div class='flex flex-1 flex-col'>
             <div id='content' class='w-full flex-1'>
-                ${ContentView()}
+
             </div>
             <div id='bottom' class='bg-zinc-900 w-full border-t border-t-zinc-700 h-(--height)' style="--height: ${createComputed(() => Math.max(timelineSize(), 156))}px">
                 ${timelineDraggingView}

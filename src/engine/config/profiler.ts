@@ -15,5 +15,21 @@ export const PROFIER_CONFIG = {
         NUM: '§5',
         ENT: '§5',
         R: '§r'
+    },
+    ANIM: {
+        TRACK_WIDTH: 20,
+        TRACK_STYLE: '-',
+        TRACK_COLOR: '§7',
+        NOTIFY: {
+            COLOR: '§6',
+            POINT_STYLE: '◆',
+        },
+        STATE: {
+            TRACK_COLOR: '§r',
+            BAR_COLOR: '§3',
+            BAR_STYLE: '-',
+            BAR_STYLE_START: '+',
+            BAR_STYLE_END: '+',
+        }
     }
 }

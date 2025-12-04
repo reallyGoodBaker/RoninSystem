@@ -36,8 +36,8 @@ export class EventInstigator<M extends { [key in keyof M]: unknown[] } = {}> {
         }
     }
 
-    on = EventInstigator.prototype.addListener
-    off = EventInstigator.prototype.removeListener
+    on = this.addListener
+    off = this.removeListener
 }
 
 /**
@@ -72,8 +72,8 @@ export abstract class EventComponent<M extends { [ K in keyof M]: M[K] } = {}, A
         }
     }
 
-    on = EventComponent.prototype.addListener
-    off = EventComponent.prototype.removeListener
+    on = this.addListener
+    off = this.removeListener
 }
 
 /**
@@ -98,8 +98,8 @@ export class EventSignal<A extends unknown[] = unknown[]> {
         this._observers.forEach(callback => callback.apply(undefined, args))
     }
 
-    on = EventSignal.prototype.addListener
-    off = EventSignal.prototype.removeListener
+    on = this.addListener
+    off = this.removeListener
 }
 
 
