@@ -28,4 +28,10 @@ export class StateTreeComponent extends Component {
             this.stateTree = new stateTreeCtor(this.actor)
         }
     }
+
+    setStateTree(stateTree: StateTree): void {
+        this.stateTree?.resetStateTree()
+        delete this.stateTree
+        this.stateTree = stateTree
+    }
 }

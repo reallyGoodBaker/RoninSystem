@@ -2,11 +2,24 @@
     "notifies": {
         "damage": 0.23
     },
-    "states": {},
+    "states": {
+        "combo": [
+            0.3,
+            0.6
+        ]
+    },
     "events": [
         {
             "tick": 5,
             "name": "notifyDamage"
+        },
+        {
+            "tick": 6,
+            "name": "stateComboStart"
+        },
+        {
+            "tick": 12,
+            "name": "stateComboEnd"
         }
     ],
     "dataAsset": "marieP.ts"

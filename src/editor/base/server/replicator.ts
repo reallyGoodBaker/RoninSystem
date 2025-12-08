@@ -62,7 +62,6 @@ class ReplicableChannel {
             this.conns.push(ws)
             ws.on('message', (recev: Buffer) => {
                 const { uri, data } = replicableEncodeDecoder.decode(new Uint8Array(recev).buffer)
-                console.log(uri)
                 baseServer._replicableSetters.get(uri)?.(data)
             })
             ws.on('close', () => {

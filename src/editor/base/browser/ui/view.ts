@@ -226,6 +226,10 @@ export function html(temp: TemplateStringsArray, ...args: ESTempArgType[]) {
                     continue
                 }
 
+                // 处理其他属性
+                if (mapping[attr.value]) {
+                    el.setAttribute(nodeName, mapping[attr.value] as string)
+                }
             }
 
             shouldRemoveAttrs.forEach(attrName => el.removeAttribute(attrName))

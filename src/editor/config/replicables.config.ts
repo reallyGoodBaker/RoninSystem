@@ -6,6 +6,8 @@ export const Replicables: string[] = [
     // Explorer
     'explorer.cwd',
     'explorer.files',
+    'explorer.mode',
+    'explorer.content',
 
     // Alert
     'app.alert.title',

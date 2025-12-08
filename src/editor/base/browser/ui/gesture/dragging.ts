@@ -100,7 +100,12 @@ export function createDraggingView(orientation=DragDirection.East, defaultSize=2
                 hover:bg-blue-500
                 hover:cursor-(--curosr)
                 ${orientationClasses}
-                ${hoverClass}">
+                ${hoverClass}
+                absolute
+                ${orientation === DragDirection.East ? 'right-0' :
+                    orientation === DragDirection.West ? 'left-0' :
+                    orientation === DragDirection.North ? 'top-0' : 'bottom-0'
+                }">
         </div>`
 
     return [

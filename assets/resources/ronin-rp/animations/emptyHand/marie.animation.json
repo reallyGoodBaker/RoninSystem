@@ -463,7 +463,7 @@
 			}
 		},
 		"animation.ss.marie.p": {
-			"animation_length": 0.7708,
+			"animation_length": 0.6458,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -777,7 +777,7 @@
 			}
 		},
 		"animation.ss.marie.pp": {
-			"animation_length": 0.9167,
+			"animation_length": 0.75,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -1114,7 +1114,7 @@
 			}
 		},
 		"animation.ss.marie.kk": {
-			"animation_length": 1,
+			"animation_length": 0.8333,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -1600,7 +1600,7 @@
 			}
 		},
 		"animation.ss.marie.ppk": {
-			"animation_length": 0.9792,
+			"animation_length": 0.8333,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -2098,7 +2098,7 @@
 			}
 		},
 		"animation.ss.marie.block": {
-			"animation_length": 0.3333,
+			"animation_length": 0.2083,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -2366,7 +2366,7 @@
 		},
 		"animation.ss.marie.grabp": {
 			"loop": true,
-			"animation_length": 1.25,
+			"animation_length": 1.0833,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -2859,7 +2859,7 @@
 		},
 		"animation.ss.marie.kkk": {
 			"loop": "hold_on_last_frame",
-			"animation_length": 1,
+			"animation_length": 0.9583,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -3454,7 +3454,7 @@
 			}
 		},
 		"animation.ss.marie.grabk": {
-			"animation_length": 1.25,
+			"animation_length": 1.0833,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -4001,7 +4001,7 @@
 			}
 		},
 		"animation.ss.marie.counterp": {
-			"animation_length": 1.25,
+			"animation_length": 1.0625,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -4491,7 +4491,7 @@
 			}
 		},
 		"animation.ss.marie.counterk": {
-			"animation_length": 1.3125,
+			"animation_length": 1.25,
 			"override_previous_animation": true,
 			"bones": {
 				"root": {
@@ -4622,11 +4622,11 @@
 							"lerp_mode": "catmullrom"
 						},
 						"0.375": {
-							"post": [24.79653, 31.802, 15.00975],
+							"post": [4.79653, 31.802, 15.00975],
 							"lerp_mode": "catmullrom"
 						},
 						"0.5": {
-							"post": [39.20354, -29.68002, -19.20518],
+							"post": [14.20354, -29.68002, -19.20518],
 							"lerp_mode": "catmullrom"
 						},
 						"0.625": {

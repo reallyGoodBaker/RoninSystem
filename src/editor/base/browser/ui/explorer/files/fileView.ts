@@ -109,18 +109,18 @@ export class FileViewUtils {
     static createIcon(desc: FileDesc) {
         const fileType = getFileType(desc)
 
-        if (fileType !== FileType.JSON) {
+        if (fileType !== FileType.JSON && fileType !== FileType.DIR) {
             return Icon(FileTypeIcons.get(fileType)!, this.defaultIconStyles)
         }
 
         for (const replacer of this._replacers) {
-            const some = replacer(new FileInfo(desc.name, desc.isDir, BreadcrumbUtils._breadcrumbs))
+            const some = replacer(new FileInfo(desc.name, desc.isDir, BreadcrumbUtils.currentCrumb()!))
             if (some) {
                 return some
             }
         }
 
-        return Icon(FileTypeIcons.get(FileType.JSON)!, this.defaultIconStyles)
+        return Icon(FileTypeIcons.get(fileType)!, this.defaultIconStyles)
     }
 }
 

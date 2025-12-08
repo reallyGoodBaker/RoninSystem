@@ -1,0 +1,186 @@
+@startuml RoninSystem 类图
+
+' 定义类
+
+class Application {
+  + actors: Map<string, Actor>
+  + spawnConfig: SpawnConfig
+  + plugins: Map<string, IPlugin>
+  + playerControllers: PlayerController[]
+  + initialized: boolean
+  + spawnActor(id: string, spawnClass: ConstructorOf<Actor>, ...components: Component[]): Actor
+  + despawnActor(id: string): void
+  + getActor<T extends Actor>(id: string): T | undefined
+  + loadPlugin(...ctor: ConstructorOf<IPlugin>[]): IPluginLoader
+  + getPlugin(name: string): IPlugin | undefined
+  + setConfig(name: string, value: any): void
+  + getConfig<T>(name: string, defaultVal?: T): T
+}
+
+interface IApplication {
+}
+
+interface IWorld {
+}
+
+interface Resource {
+}
+
+interface IPluginLoader {
+}
+
+interface IConfigurator {
+}
+
+Application ..|> IApplication
+IApplication <|-- IWorld
+IApplication <|-- Resource
+IApplication <|-- IPluginLoader
+IApplication <|-- IConfigurator
+
+class Actor {
+  + id: string
+  + allowTicking: boolean
+  + tags: string[]
+  + addComponent(component: Component): Actor
+  + removeComponent(name: string): Actor
+  + getComponent<T extends Component>(cls: ConstructorOf<T>): T
+  + getComponents(): Component[]
+  + tick(dt: number, dms: number): void
+  + start(): void
+  + despawn(): void
+}
+
+class TaggableObject {
+  + addTag(tag: string): void
+  + removeTag(tag: string): void
+  + getTags(): string[]
+  + hasTag(tag: string | Tag, exact?: boolean): boolean
+}
+
+Actor --|> TaggableObject
+
+class Pawn {
+  + entity: Entity | null
+  + controller: Controller | null
+  + onPossess(controller: Controller): void
+  + onUnPossess(): void
+  + getController<T extends IController>(): T
+  + getNativeComponent<T extends string>(componentId: T): EntityComponentReturnType<T> | undefined
+}
+
+Pawn --|> Actor
+
+interface Possessable {
+  + getController<T extends IController>(): T
+  + onPossess(controller: IController): void
+  + onUnPossess(): void
+}
+
+Pawn ..|> Possessable
+
+class Component<A extends Actor> {
+  # actor: A
+  + allowTicking: boolean
+  + update?(dTick: number, dMs: number): void
+  + attach?(): void
+  + start?(): void
+  + detach?(): void
+  + remove(): void
+  + getComponent<T extends Component>(cls: ConstructorOf<T>): T
+  + addComponent(component: Component): Promise<void>
+  + removeComponent(name: string): Promise<void>
+}
+
+' Component 与 Actor 关联
+Actor "1" *-- "*" Component : contains
+
+class Controller {
+  + pawn: Possessable | null
+  + possess(pawn: Possessable): void
+  + unPossess(): void
+  + getPawn<T extends Possessable>(): T | undefined
+}
+
+Controller --|> Actor
+
+interface IController {
+  + possess(pawn: Possessable): void
+  + unPossess(): void
+  + getPawn<T extends Possessable>(): T | undefined
+}
+
+Controller ..|> IController
+
+class PlayerController {
+  + pawn: Possessable | null
+  + possess(pawn: Possessable): void
+  + unPossess(): void
+  + getPawn<T extends Possessable>(): T | undefined
+  + setupInput(): void
+}
+
+PlayerController --|> Actor
+PlayerController ..|> IController
+
+' Controller 与 Pawn 关联
+Controller "1" -- "1" Pawn : controls
+Pawn "1" -- "1" Controller : controlled by
+
+class ModBase {
+}
+
+interface Mod {
+  + start?(app: Application, ev: StartupEvent): void
+  + initialized?(app: Application): void
+  + exit?(): void
+}
+
+ModBase ..|> Mod
+
+class Plugin {
+  + name: string
+  + description: string
+  + startModule(app: IApplication): void
+  + stopModule?(app: IApplication): void
+}
+
+interface IPlugin {
+}
+
+Plugin ..|> IPlugin
+
+' Application 与 Plugin 关联
+Application "1" *-- "*" IPlugin : plugins
+
+' Application 与 Actor 关联
+Application "1" *-- "*" Actor : actors
+
+' Application 与 PlayerController 关联
+Application "1" *-- "*" PlayerController : playerControllers
+
+' Tag 系统
+class Tag {
+  + tag: string
+  + isValid: boolean
+  + matchTag(comparator: Tag, exact?: boolean): boolean
+  + match(comparator: string, exact?: boolean): boolean
+  static of(tag: string | Tag): Tag
+  static hasTag(taggable: Taggable, tag: string | Tag, exact?: boolean): boolean
+}
+
+interface Taggable {
+  + getTags(): string[]
+  + addTag(tag: string): void
+  + removeTag(tag: string): void
+}
+
+TaggableObject ..|> Taggable
+
+' 依赖关系
+Application ..> Tag : uses
+Actor ..> Component : uses
+Pawn ..> Entity : uses
+Component ..> Actor : depends
+
+@enduml

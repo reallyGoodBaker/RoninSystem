@@ -3,12 +3,23 @@ import { html } from "../../view"
 import { Breadcrumb } from "./breadcrumb"
 import { replicable } from '../../../replicator'
 import { FileDescUtils } from "../files/filesLayout"
+import { ExplorerModeHelper } from "../mode/switcher"
 
-const [ breadcrumbs, setBreadcrumbs ] = replicable('explorer.cwd', 'assets')
+const [ breadcrumbs, setBreadcrumbs ] = replicable('explorer.cwd', [ '', '', '' ])
 const [ _, setContentPath ] = replicable('explorer.content', '')
 
 export class BreadcrumbUtils {
     static _breadcrumbs = breadcrumbs()
+
+    static currentCrumb(value?: string) {
+        const mode = ExplorerModeHelper.getMode()
+
+        if (value === undefined) {
+            return this._breadcrumbs[mode]
+        }
+
+        this._breadcrumbs[mode] = value
+    }
 
     static {
         createEffect(() => {
@@ -17,31 +28,35 @@ export class BreadcrumbUtils {
     }
 
     static push(name: string) {
-        if (FileDescUtils.isDir(name))
-            setBreadcrumbs(this._breadcrumbs + '/' + name)
-        else
-            setContentPath(this._breadcrumbs + '/' + name)
+        const filePath = this.currentCrumb()
+
+        if (FileDescUtils.isDir(name)) {
+            this.currentCrumb(filePath + '/' + name)
+            setBreadcrumbs(this._breadcrumbs)
+        } else {
+            setContentPath(filePath + '/' + name)
+        }
     }
 
     static pop() {
-        const _breadcrumbs = this._breadcrumbs.split('/')
+        const _breadcrumbs = this.currentCrumb()!.split('/')
+
         if (_breadcrumbs.length > 1) {
             _breadcrumbs.pop()
-            setBreadcrumbs(_breadcrumbs.join('/'))
+            this.currentCrumb(_breadcrumbs.join('/'))
+            setBreadcrumbs(this._breadcrumbs)
         }
     }
 
     static navigateTo(index: number) {
-        const _breadcrumbs = this._breadcrumbs.split('/')
-        setBreadcrumbs(
-            _breadcrumbs
-                .slice(0, index + 1)
-                .join('/')
-        )
+        const _breadcrumbs = this.currentCrumb()!.split('/')
+        this.currentCrumb(_breadcrumbs.slice(0, index + 1).join('/'))
+
+        setBreadcrumbs(this._breadcrumbs)
     }
 
     static isRootPath() {
-        return this._breadcrumbs === 'assets'
+        return this.currentCrumb() === ''
     }
 }
 
@@ -49,7 +64,7 @@ export function BreadcrumbsView() {
     return html`
         <div class="flex w-full p-1 overflow-x-auto">
             ${createComputed(() => 
-                breadcrumbs().split('/')
+                breadcrumbs()[ExplorerModeHelper.getMode()].split('/')
                     .map((breadcrumb, i) =>
                         Breadcrumb(breadcrumb, () => BreadcrumbUtils.navigateTo(i))
                     )

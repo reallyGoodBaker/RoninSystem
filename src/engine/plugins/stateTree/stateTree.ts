@@ -2,6 +2,8 @@ import { Actor } from "@ronin/core/architect/actor"
 import { EventInstigator } from "@ronin/core/architect/event"
 import { Tag } from "@ronin/core/tag"
 import { State, Task } from "./state"
+import type { StateTreeComponent } from "./stateTreeComponent"
+import { ReflectConfig } from "@ronin/core/architect/reflect"
 
 export interface StateTreeEvent {
     readonly tag: Tag
@@ -19,12 +21,24 @@ class RootState extends State {
 }
 
 export class StateTree extends EventInstigator {
-    private readonly Root = new RootState()
-    private readonly tasks: Record<string, Task> = {}
+    protected readonly Root = new RootState()
+    protected readonly tasks: Record<string, Task> = {}
 
     protected _curState: State = this.Root
     protected _taskFinished = true
     protected _shouldTransition = true
+
+    readonly component: StateTreeComponent
+
+    constructor(component: StateTreeComponent) {
+        super()
+        this.component = component
+        this.onStart()
+    }
+
+    getOwner() {
+        return ReflectConfig.unsafeCtxActor()
+    }
 
     getCurrentState() {
         return this._curState
@@ -59,7 +73,7 @@ export class StateTree extends EventInstigator {
          */
         try {
             for (const task of state.taskNames) {
-                await this.tasks[task]?.(state, this)
+                await this.tasks[task]?.(this, state)
             }
             this._taskFinished = true
 
@@ -202,4 +216,6 @@ export class StateTree extends EventInstigator {
             this.tryTransition()
         }
     }
+
+    onStart() {}
 }

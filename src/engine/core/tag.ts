@@ -1,6 +1,7 @@
 import { system, world } from '@minecraft/server'
 import { Resource, Resources } from '@ronin/core/architect/resorce'
 import { ObjectHelper } from '@ronin/utils/helpers/objectHelper'
+import { profiler } from './profiler'
 
 const isTag = Symbol('isTag')
 
@@ -17,24 +18,23 @@ export interface Taggable {
  * - 如果属性值不是对象，映射到 Tag 类型
  */
 export type TagMapping<T> = T extends object
-    ? { [K in keyof T]: Readonly<
-        T[K] extends null ? Tag
+    ? { [K in keyof T]: T[K] extends null ? Tag
             : T[K] extends object ? TagMapping<T[K]>
-            : never
-    >}
+            : never}
     : never
 
 export class Tag {
     private static readonly _tagMap = new Map<string, Tag>()
-    private static readonly constructable: Resource & { allowTagConstruct: boolean } = {
-        allowTagConstruct: false,
-        enter() {
-            this.allowTagConstruct = true
-        },
-        exit() {
-            this.allowTagConstruct = false
+    private static readonly constructable: Resource & { allowTagConstruct: boolean } = (() => {
+        let allowTagConstruct = false
+        const enter = () => allowTagConstruct = true
+        const exit = () => allowTagConstruct = false
+        return {
+            allowTagConstruct,
+            enter,
+            exit
         }
-    }
+    })()
 
     static isValid(tagStr: string): boolean {
         const container = tagStr.trim().split('.')
@@ -198,11 +198,11 @@ export abstract class TaggableObject implements Taggable {
         return Tag.hasTagAny(this, tags, exact)
     }
 
-    addTags(tags: (string | Tag)[]): void {
+    addTags(...tags: (string | Tag)[]): void {
         Tag.addTags(this, tags)
     }
 
-    removeTags(tags: (string | Tag)[]): void {
+    removeTags(...tags: (string | Tag)[]): void {
         Tag.removeTags(this, tags)
     }
 

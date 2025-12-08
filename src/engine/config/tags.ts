@@ -21,5 +21,5 @@ export const tags = Tag.fromObject({
     damage: {
         determination: null,
         health: null,
-    }
+    },
 })

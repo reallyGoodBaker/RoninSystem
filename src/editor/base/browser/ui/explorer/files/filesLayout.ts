@@ -24,7 +24,7 @@ export class FileDescUtils {
 
 export function FilesView() {
     return html`
-        <div class="flex w-full flex-wrap overflow-y-auto">
+        <div class="flex flex-1 w-full flex-wrap overflow-y-auto justify-start h-fit content-start">
             ${createComputed(() => {
                 const fileViews = files().map(file => FileView(file))
                 return BreadcrumbUtils.isRootPath()

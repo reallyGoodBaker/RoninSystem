@@ -5,6 +5,7 @@
             "damage": 0.38
         },
         "animation.ss.marie.p": {
+            "combo": [0.3, 0.6],
             "damage": 0.23
         }
         ,

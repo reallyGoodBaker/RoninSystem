@@ -2,7 +2,7 @@ import { EventDelegate } from "@ronin/core/architect/event"
 import type { StateTree, StateTreeEvent } from "./stateTree"
 
 export interface Task {
-    (state: State, stateTree: StateTree): void | Promise<void>
+    (stateTree: StateTree, state: State): void | Promise<void>
 }
 
 export class State {

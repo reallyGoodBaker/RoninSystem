@@ -11,19 +11,19 @@ export function AppLayout() {
     const [ timelineDraggingView, timelineSize ] = createDraggingView(DragDirection.North, 156)
 
     return html`
-        <div id='explorer' class='flex bg-zinc-900 h-full border-r border-r-zinc-700 w-(--width)' style="--width: ${createComputed(() => Math.max(expSize(), 256))}px">
-            <div class="flex" style="width: calc(100% - 4px);">${ExplorerLayout()}</div>
+        <div id='explorer' class='relative flex bg-zinc-900 h-full border-r border-r-zinc-700 w-(--width)' style="--width: ${createComputed(() => Math.max(expSize(), 256))}px">
+            <div class="flex w-full">${ExplorerLayout()}</div>
             ${explorerDraggingView}
         </div>
         <div class='flex flex-1 flex-col'>
             <div id='content' class='w-full flex-1'>
 
             </div>
-            <div id='bottom' class='bg-zinc-900 w-full border-t border-t-zinc-700 h-(--height)' style="--height: ${createComputed(() => Math.max(timelineSize(), 156))}px">
+            <div id='bottom' class='relative bg-zinc-900 w-full border-t border-t-zinc-700 h-(--height)' style="--height: ${createComputed(() => Math.max(timelineSize(), 156))}px">
                 ${timelineDraggingView}
             </div>
         </div>
-        <div id='properties' class='bg-zinc-900 h-full border-l border-l-zinc-700 w-(--width)' style="--width: ${createComputed(() => Math.max(propSize(), 256))}px">
+        <div id='properties' class='relative bg-zinc-900 h-full border-l border-l-zinc-700 w-(--width)' style="--width: ${createComputed(() => Math.max(propSize(), 256))}px">
             ${propertiesDraggingView}
         </div>
         ${Alert.view()}

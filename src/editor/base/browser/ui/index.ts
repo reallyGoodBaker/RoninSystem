@@ -16,7 +16,23 @@ FileViewUtils.registerReplacer(info => {
     if (!info.getParts().includes('entities'))
         return
 
-    return Icon('\ue91d', FileViewUtils.defaultIconStyles)
+    return Icon('\uf3b6', FileViewUtils.defaultIconStyles)
+})
+
+// 客户端生物
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('entity'))
+        return
+
+    return Icon('\uf25b', FileViewUtils.defaultIconStyles)
+})
+
+// UI
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('ui'))
+        return
+
+    return Icon('\uf10a', FileViewUtils.defaultIconStyles)
 })
 
 // 物品
@@ -57,4 +73,52 @@ FileViewUtils.registerReplacer(info => {
         return
 
     return Icon('\ue412', FileViewUtils.defaultIconStyles)
+})
+
+// 材质
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('textures'))
+        return
+
+    return Icon('\ue421', FileViewUtils.defaultIconStyles)
+})
+
+// 文本
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('texts'))
+        return
+
+    return Icon('\ue894', FileViewUtils.defaultIconStyles)
+})
+
+// 音频
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('sounds'))
+        return
+
+    return Icon('\ue050', FileViewUtils.defaultIconStyles)
+})
+
+// 模型
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('models'))
+        return
+
+    return Icon('\uf3aa', FileViewUtils.defaultIconStyles)
+})
+
+// 粒子效果
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('particles'))
+        return
+
+    return Icon('\uf585', FileViewUtils.defaultIconStyles)
+})
+
+// 动画通知
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('anim_notifies'))
+        return
+
+    return Icon('\ue922', FileViewUtils.defaultIconStyles)
 })

@@ -1,0 +1,38 @@
+import { profiler } from "@ronin/core/profiler"
+import { RoninPlayerController } from "@ronin/plugins/ronin/roninController"
+import { RoninModPlayer } from "@ronin/plugins/ronin/player"
+import { AnimationSequenceComponent } from "@ronin/plugins/animSeq/anim"
+import { MarieKSequence } from "./generated/ss/marieK"
+import { tags } from "@ronin/config/tags"
+import { StateTreeComponent } from "@ronin/plugins/stateTree/stateTreeComponent"
+import { Tag } from "@ronin/core/tag"
+
+export class MyController extends RoninPlayerController {
+    setupInput(): void {
+        super.setupInput()
+
+        const player = <RoninModPlayer> this.getPawn()
+        const animComp = player.getComponent(AnimationSequenceComponent)
+        const stateTree = player.getComponent(StateTreeComponent)
+
+        this.OnAttack.on(async press => {
+            if (!press) {
+                return
+            }
+
+            if (!player.hasTag('skill.slot.attack')) {
+                stateTree.stateTree?.tryTransitionTo('p')
+            }
+        })
+
+        this.OnInteract.on(async press => {
+            if (!press) {
+                return
+            }
+
+            profiler.info('start kick')
+            animComp.playAnimSeq(MarieKSequence.animation)
+            profiler.info(animComp.getPlayingAnimation())
+        })
+    }
+}

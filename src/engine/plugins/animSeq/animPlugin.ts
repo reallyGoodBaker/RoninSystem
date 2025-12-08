@@ -22,6 +22,10 @@ export class AnimationSequencePlugin implements IPlugin {
         )
     }
 
+    static getAnimSeqComp(id: string) {
+        return Application.getInst().getActor(id)?.getComponent(AnimationSequenceComponent)
+    }
+
     @CustomCommand('查看动画层')
     anim_seq_layer(
         @Param.Required('actor') entities: Entity[],

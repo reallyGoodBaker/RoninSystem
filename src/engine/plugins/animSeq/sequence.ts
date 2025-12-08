@@ -4,7 +4,6 @@ import { EventSignal } from "@ronin/core/architect/event"
 import { profiler } from "@ronin/core/profiler"
 import { PROFIER_CONFIG } from '@ronin/config/profiler'
 import { ConstructorOf } from "@ronin/core/types"
-import { ReflectConfig } from "@ronin/core/architect/reflect"
 
 const { ANIM: { TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG
 

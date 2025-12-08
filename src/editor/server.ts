@@ -6,5 +6,5 @@ const [ ver, setVer ] = replicable(
 )
 
 
-import './base/server/explorer'
+import './base/server/explorer/explorer'
 import './base/server/content'

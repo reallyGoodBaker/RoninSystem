@@ -22,6 +22,6 @@ export function Breadcrumb(text: string | Getter<string>, onClick: () => void=Fu
             not-last:after:content-['']
             not-last:after:text-lg
             not-last:after:h-6
-        ">${text === 'assets' ? Icon('\ue88a', [ 'scale-80' ]) : text}</div>
+        ">${text === '' ? Icon('\ue88a', [ 'scale-80' ]) : text}</div>
     `
 }

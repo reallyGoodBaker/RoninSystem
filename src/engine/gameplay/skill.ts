@@ -119,14 +119,14 @@ export class SkillSystemComponent extends Component {
         })
 
         if (Array.isArray(skill.grantedTags)) {
-            this.actor.addTags(skill.grantedTags)   
+            this.actor.addTags(...skill.grantedTags)   
         }
     }
 
     removeSkill<T extends SkillSpec>(skill: T) {
         this.skills.delete(skill)
         this.skillRuntimes.delete(skill)
-        this.actor.removeTags(skill?.grantedTags ?? [])
+        this.actor.removeTags(...skill?.grantedTags ?? [])
         const skillInst = this.instancedSkills.get(skill)
         if (skillInst && (skillInst as SkillWithEvent).getTag) {
             const tag = (skillInst as SkillWithEvent).getTag()
@@ -155,13 +155,13 @@ export class SkillSystemComponent extends Component {
 
     protected applyTaggedObject({ ownedTags }: TaggedObjectOptions) {
         if (ownedTags) {
-            this.actor.addTags(ownedTags)
+            this.actor.addTags(...ownedTags)
         }
     }
 
     protected revokeTaggedObject({ ownedTags }: TaggedObjectOptions) {
         if (ownedTags) {
-            this.actor.removeTags(ownedTags)
+            this.actor.removeTags(...ownedTags)
         }
     }
 
@@ -219,7 +219,7 @@ export class SkillSystemComponent extends Component {
     private _tryDeinstantiate(skill: SkillSpec) {
         this.instancedSkills.delete(skill)
         if (skill.lifeTime === 'active' && Array.isArray(skill.grantedTags)) {
-            this.actor.removeTags(skill.grantedTags)
+            this.actor.removeTags(...skill.grantedTags)
         }
     }
 

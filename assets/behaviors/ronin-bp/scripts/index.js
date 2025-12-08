@@ -2589,15 +2589,16 @@ const isTag = Symbol('isTag');
 class Tag {
     tag;
     static _tagMap = new Map();
-    static constructable = {
-        allowTagConstruct: false,
-        enter() {
-            this.allowTagConstruct = true;
-        },
-        exit() {
-            this.allowTagConstruct = false;
-        }
-    };
+    static constructable = (() => {
+        let allowTagConstruct = false;
+        const enter = () => allowTagConstruct = true;
+        const exit = () => allowTagConstruct = false;
+        return {
+            allowTagConstruct,
+            enter,
+            exit
+        };
+    })();
     static isValid(tagStr) {
         const container = tagStr.trim().split('.');
         return !container.some(v => !v.match(/[\w\$]+/));
@@ -2612,8 +2613,11 @@ class Tag {
     // create
     constructor(tag) {
         this.tag = tag;
-        {
+        if (!Tag.constructable.allowTagConstruct) {
             throw new Error('Tag class is not allowed to construct');
+        }
+        if (this._isValid = Tag.isValid(tag)) {
+            Tag._tagMap.set(tag, this);
         }
     }
     get isValid() {
@@ -2717,10 +2721,10 @@ class TaggableObject {
     hasTagAny(tags, exact = false) {
         return Tag.hasTagAny(this, tags, exact);
     }
-    addTags(tags) {
+    addTags(...tags) {
         Tag.addTags(this, tags);
     }
-    removeTags(tags) {
+    removeTags(...tags) {
         Tag.removeTags(this, tags);
     }
     discardTag(tag) {
@@ -4140,19 +4144,19 @@ class DeterminationHudComponent extends Component {
  */
 class RoninPlayerController extends PlayerController {
     inputComponent = new InputComponent();
-    OnAttack = new EventDelegate();
-    OnInteract = new EventDelegate();
-    OnSneak = new EventDelegate();
-    OnSprint = new EventDelegate();
-    OnJump = new EventDelegate();
+    OnAttack = new EventSignal();
+    OnInteract = new EventSignal();
+    OnSneak = new EventSignal();
+    OnSprint = new EventSignal();
+    OnJump = new EventSignal();
     setupInput() {
         this.addComponent(this.inputComponent);
         this.getPawn()?.addComponent(new ControlKitComponent());
-        this.inputComponent.addListener('Attack', this.OnAttack.call);
-        this.inputComponent.addListener('Interact', this.OnInteract.call);
-        this.inputComponent.addListener('Sprint', this.OnSprint.call);
-        this.inputComponent.addListener('Sneak', this.OnSneak.call);
-        this.inputComponent.addListener('Jump', this.OnJump.call);
+        this.inputComponent.addListener('Attack', this.OnAttack.trigger);
+        this.inputComponent.addListener('Interact', this.OnInteract.trigger);
+        this.inputComponent.addListener('Sprint', this.OnSprint.trigger);
+        this.inputComponent.addListener('Sneak', this.OnSneak.trigger);
+        this.inputComponent.addListener('Jump', this.OnJump.trigger);
     }
 }
 
@@ -4183,6 +4187,11 @@ class StateTreeComponent extends Component {
         if (stateTreeCtor) {
             this.stateTree = new stateTreeCtor(this.actor);
         }
+    }
+    setStateTree(stateTree) {
+        this.stateTree?.resetStateTree();
+        delete this.stateTree;
+        this.stateTree = stateTree;
     }
 }
 
@@ -4288,6 +4297,15 @@ class StateTree extends EventInstigator {
     _curState = this.Root;
     _taskFinished = true;
     _shouldTransition = true;
+    component;
+    constructor(component) {
+        super();
+        this.component = component;
+        this.onStart();
+    }
+    getOwner() {
+        return ReflectConfig.unsafeCtxActor();
+    }
     getCurrentState() {
         return this._curState;
     }
@@ -4314,7 +4332,7 @@ class StateTree extends EventInstigator {
          */
         try {
             for (const task of state.taskNames) {
-                await this.tasks[task]?.(state, this);
+                await this.tasks[task]?.(this, state);
             }
             this._taskFinished = true;
             return true;
@@ -4433,6 +4451,7 @@ class StateTree extends EventInstigator {
             this.tryTransition();
         }
     }
+    onStart() { }
 }
 
 const { TOKENS: TOKENS$1 } = PROFIER_CONFIG;
@@ -4821,11 +4840,23 @@ var notifies$1 = {
 	damage: 0.23
 };
 var states$1 = {
+	combo: [
+		0.3,
+		0.6
+	]
 };
 var events$1 = [
 	{
 		tick: 5,
 		name: "notifyDamage"
+	},
+	{
+		tick: 6,
+		name: "stateComboStart"
+	},
+	{
+		tick: 12,
+		name: "stateComboEnd"
 	}
 ];
 var dataAsset$1 = {
@@ -4833,16 +4864,61 @@ var dataAsset$1 = {
 	states: states$1,
 	events: events$1};
 
+const tags = Tag.fromObject({
+    skill: {
+        slot: {
+            attack: null,
+            special: null,
+            tian: null,
+            di: null,
+            ren: null,
+            draw: null,
+            sheathe: null,
+            sneak: null,
+            jump: null,
+            passive0: null,
+            passive1: null,
+            passive2: null,
+        }
+    },
+    damage: {
+        determination: null,
+        health: null,
+    },
+});
+
 let MariePSequence = class MariePSequence extends AnimSequence {
     static animation = 'animation.ss.marie.p';
     animation = 'animation.ss.marie.p';
-    duration = 15;
+    duration = 12;
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$1.events;
     notifies = dataAsset$1.notifies;
     states = dataAsset$1.states;
     notifyDamage() {
+    }
+    onStart() {
+        this.getOwner().addTags('skill.slot.attack');
+    }
+    onStopped() {
+        this.getOwner().removeTags('skill.slot.attack');
+    }
+    inputAttack() {
+        const owner = this.getOwner();
+        const tree = owner.getComponent(StateTreeComponent).stateTree;
+        tree.getCurrentState().OnStateTreeEvent.call({
+            tag: tags.skill.slot.attack,
+            targetActor: owner,
+        }, tree);
+    }
+    stateComboStart() {
+        const controller = this.getOwner().getController();
+        controller.OnAttack.addListener(this.inputAttack);
+    }
+    stateComboEnd() {
+        const controller = this.getOwner().getController();
+        controller.OnAttack.removeListener(this.inputAttack);
     }
 };
 MariePSequence = __decorate([
@@ -4868,13 +4944,19 @@ var dataAsset = {
 let MariePpSequence = class MariePpSequence extends AnimSequence {
     static animation = 'animation.ss.marie.pp';
     animation = 'animation.ss.marie.pp';
-    duration = 18;
+    duration = 15;
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset.events;
     notifies = dataAsset.notifies;
     states = dataAsset.states;
     notifyDamage() {
+    }
+    onStart() {
+        this.getOwner().addTags('skill.slot.attack');
+    }
+    onStopped() {
+        this.getOwner().removeTags('skill.slot.attack');
     }
 };
 MariePpSequence = __decorate([
@@ -4889,6 +4971,9 @@ class AnimationSequencePlugin {
     description = '动画序列插件，用于管理动画';
     startModule(app) {
         registerPlayerComponent(AnimationSequenceComponent);
+    }
+    static getAnimSeqComp(id) {
+        return Application.getInst().getActor(id)?.getComponent(AnimationSequenceComponent);
     }
     anim_seq_layer(entities, layer = 0) {
         entities.forEach(entity => {
@@ -4948,23 +5033,16 @@ class MyController extends RoninPlayerController {
         super.setupInput();
         const player = this.getPawn();
         const animComp = player.getComponent(AnimationSequenceComponent);
-        let attackCount = 0;
-        this.OnAttack.bind(async (press) => {
+        const stateTree = player.getComponent(StateTreeComponent);
+        this.OnAttack.on(async (press) => {
             if (!press) {
                 return;
             }
-            const current = ++attackCount;
-            switch (current) {
-                case 1:
-                    animComp.playAnimSeq(MariePSequence.animation);
-                    break;
-                case 2:
-                    await animComp.playAnimSeq(MariePpSequence.animation);
-                    attackCount = 0;
-                    break;
+            if (!player.hasTag('skill.slot.attack')) {
+                stateTree.stateTree?.tryTransitionTo('p');
             }
         });
-        this.OnInteract.bind(async (press) => {
+        this.OnInteract.on(async (press) => {
             if (!press) {
                 return;
             }
@@ -4974,10 +5052,43 @@ class MyController extends RoninPlayerController {
         });
     }
 }
+
+class MariePState extends State {
+    static taskName = 'p';
+    static async task(tree) {
+        const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent);
+        await animSeq?.playAnimSeq(MariePSequence.animation);
+    }
+    taskNames = [MariePState.taskName];
+    onEnter(stateTree, prevState) {
+        this.OnStateTreeEvent.bind(ev => {
+            if (ev.tag.matchTag(tags.skill.slot.attack, true)) {
+                stateTree.tryTransitionTo('pp');
+            }
+        });
+    }
+}
+class MariePpState extends State {
+    static taskName = 'pp';
+    static async task(tree) {
+        const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent);
+        await animSeq?.playAnimSeq(MariePpSequence.animation);
+    }
+    taskNames = [MariePpState.taskName];
+}
+class MarieTricksStateTree extends StateTree {
+    onStart() {
+        this.addTask(MariePState.taskName, MariePState.task);
+        this.addTask(MariePpState.taskName, MariePpState.task);
+        this.Root.appendChild(new MariePState('p'));
+        this.Root.appendChild(new MariePpState('pp'));
+    }
+}
+
 let MyMod = class MyMod extends ModBase {
     start(app) {
         app.setConfig(StateTreeConfKey, {
-            'minecraft:player': StateTree
+            'minecraft:player': MarieTricksStateTree
         });
         app.loadPlugin(RoninPlugin, StateTreePlugin, AnimationSequencePlugin);
         registerPlayerController(MyController);
