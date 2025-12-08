@@ -81,7 +81,7 @@ export function createDraggable() {
     ] as const
 }
 
-export function createDraggingView(orientation=DragDirection.East, defaultSize=256) {
+export function createDraggingView(orientation=DragDirection.East, defaultSize=256, min=256, max=512) {
     const [ dragEvent, startDrag, dragging ] = createDraggable()
     const [ size, setSize ] = createSignal(defaultSize)
     const orientationClasses = orientation > 1 ? 'h-1 w-full' : 'w-1 h-full'
@@ -89,7 +89,7 @@ export function createDraggingView(orientation=DragDirection.East, defaultSize=2
 
     createEffect(() => {
         setSize(
-            DraggingUtils.delta(dragEvent(), orientation) + size()
+            Math.max(min, Math.min(max, DraggingUtils.delta(dragEvent(), orientation) + size()))
         )
     })
 
