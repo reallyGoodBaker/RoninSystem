@@ -5,6 +5,7 @@ import path from 'path'
 import { alert } from '../alert'
 import { ExplorerMode } from '@editor/config/explorerMode'
 import { behaviorPath, resourcePath } from '../conf'
+import { getFilesFromCwd, handleFiles, registerCompactFileCategory } from './discover'
 
 const [ explorerMode, setExplorerMode ] = replicable<ExplorerMode>(
     'explorer.mode',
@@ -43,8 +44,15 @@ const filePathResolver = {
 createEffect(() => {
     try {
         const _explorerMode = explorerMode()
-        const filePath = filePathResolver[_explorerMode as keyof typeof filePathResolver](cwd()[_explorerMode])
-        setFiles(getSortedFileDescs(filePath))
+        const _cwd = cwd()[_explorerMode] as string
+
+        if (filePathResolver[_explorerMode as keyof typeof filePathResolver]) {
+            const filePath = filePathResolver[_explorerMode as keyof typeof filePathResolver](_cwd)
+            setFiles(getSortedFileDescs(filePath))   
+            return
+        }
+
+        setFiles(getFilesFromCwd(_cwd))
     } catch {
         setFiles(getSortedFileDescs(behaviorPath('')))
         setCwd([ '', '', '' ])
@@ -73,4 +81,23 @@ export function registerFilePathResolver(mode: ExplorerMode, resolver: (uri: str
     filePathResolver[mode as keyof typeof filePathResolver] = resolver
 }
 
+// 生物
+registerCompactFileCategory(
+    '生物',
+    filePath => fs.readFileSync(filePath, 'utf-8').includes('"minecraft:entity"'),
+)
 
+// 物品
+registerCompactFileCategory(
+    '物品',
+    filePath => fs.readFileSync(filePath, 'utf-8').includes('"minecraft:item"'),
+)
+
+// 方块
+registerCompactFileCategory(
+    '方块',
+    filePath => fs.readFileSync(filePath, 'utf-8').includes('"minecraft:block"')
+)
+
+
+handleFiles()

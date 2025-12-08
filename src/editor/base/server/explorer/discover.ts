@@ -2,6 +2,7 @@ import { walk } from '../file'
 import { behaviorPath } from '../conf'
 import { FileDesc } from '@editor/base/browser/ui/explorer/files/fileView'
 import fs from 'fs'
+import path from 'path'
 
 const explorerStore: Record<string, any> = {}
 
@@ -40,15 +41,14 @@ export interface FileMatcher {
     (file: string): boolean
 }
 
-const categories = new Map<string, { matcher: FileMatcher, filesProvider: (cwd: string) => FileDesc[] }>()
+const categories = new Map<string, FileMatcher>()
 const categoryInsts: FileCategory[] = []
 
 export function registerCompactFileCategory(
     category: string,
     matcher: FileMatcher,
-    filesProvider: (cwd: string) => FileDesc[]
 ) {
-    categories.set(category, { matcher, filesProvider })
+    categories.set(category, matcher)
 }
 
 export function handleFiles() {
@@ -58,9 +58,9 @@ export function handleFiles() {
     }
 
     walk(behaviorPath(''), filePath => {
-        for (const [ category, { matcher } ] of categories.entries()) {
+        for (const [ category, matcher ] of categories.entries()) {
             if (matcher(filePath)) {
-                const fileName = filePath.split('/').pop()!
+                const fileName = path.basename(filePath)
                 categoryInsts.find(categoryInst => categoryInst.name === category)?.addFile(fileName, filePath)
             }
         }
@@ -79,25 +79,15 @@ export function getFilesFromCwd(cwd: string): FileDesc[] {
         }))
     }
 
-    const [ category, fileName ] = cwd.split('/')
+    const [ _, category, fileName ] = cwd.split('/')
     if (fileName) {
         throw new Error('Unexpected cwd: ' + cwd)
     }
 
-    return getCategory(category)!.getFileEntries().map(([ name ]) => {
+    return getCategory(category)?.getFileEntries().map(([ name ]) => {
         return {
             isDir: false,
             name,
         }
-    })
+    }) ?? []
 }
-
-export function getFilesProvider(categoryName: string) {
-    return categories.get(getCategory(categoryName)!.constructor as any)!.filesProvider
-}
-
-registerCompactFileCategory(
-    'entity',
-    filePath => fs.readFileSync(filePath, 'utf-8').includes('minecraft:entity'),
-    getFilesFromCwd
-)

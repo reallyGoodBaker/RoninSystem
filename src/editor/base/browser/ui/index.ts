@@ -122,3 +122,19 @@ FileViewUtils.registerReplacer(info => {
 
     return Icon('\ue922', FileViewUtils.defaultIconStyles)
 })
+
+// 动画
+FileViewUtils.registerReplacer(info => {
+    if (!info.getParts().includes('animations'))
+        return
+
+    return Icon('\ue71c', FileViewUtils.defaultIconStyles)
+})
+
+// 各种控制器
+FileViewUtils.registerReplacer(info => {
+    if (!info.name.includes('_controllers'))
+        return
+
+    return Icon('\ue83d', FileViewUtils.defaultIconStyles)
+})
