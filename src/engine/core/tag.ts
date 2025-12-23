@@ -29,16 +29,29 @@ export class Tag {
         let allowTagConstruct = false
         const enter = () => allowTagConstruct = true
         const exit = () => allowTagConstruct = false
-        return {
-            allowTagConstruct,
+        return new Proxy({
             enter,
             exit
-        }
+        }, {
+            get(t, p, r) {
+                if (p === 'allowTagConstruct') {
+                    return allowTagConstruct
+                }
+                return t[p as keyof typeof t]
+            },
+            set(t, p, v, r) {
+                return false
+            }
+        }) as any
     })()
 
     static isValid(tagStr: string): boolean {
         const container = tagStr.trim().split('.')
         return !container.some(v => !v.match(/[\w\$]+/))
+    }
+
+    static from(tagStr: string): Tag {
+        return new Tag(tagStr)
     }
 
     static of(tag: string | Tag): Tag {
@@ -167,7 +180,7 @@ export class Tag {
         return Resources.with(this.constructable, () => {
             ObjectHelper.traverse(object, (obj, key, parent, path) => {
                 if (obj === null) {
-                    const tag = this.of(path.join('.'))
+                    const tag = this.from(path.join('.'))
                     if (!tag.isValid) {
                         return null
                     }

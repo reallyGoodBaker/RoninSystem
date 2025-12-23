@@ -216,7 +216,10 @@ function writeCode(folder: string, fileName: string, code: string, data: AnimSeq
     if (!fs.existsSync(filePath)) {
         fs.mkdirSync(path.dirname(filePath), { recursive: true })
     }
-    fs.writeFileSync(filePath + '.ts', code)
+    const codePath = filePath + '.ts'
+    if (!fs.existsSync(codePath)) {
+        fs.writeFileSync(codePath, code)
+    }
     const editorData = <any> data
     editorData.dataAsset = fileName + '.ts'
     fs.writeFileSync(filePath + '.json', JSON.stringify(editorData, null, 4))
