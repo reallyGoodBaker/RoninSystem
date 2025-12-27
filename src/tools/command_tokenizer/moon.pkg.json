@@ -1,0 +1,12 @@
+{
+    "link": {
+        "js": {
+            "exports": [
+                "command_tokens",
+                "Token",
+                "Var"
+            ],
+            "format": "esm"
+        }
+    }
+}
