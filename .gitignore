@@ -1,5 +1,7 @@
 node_modules
-dist
 package-lock.json
 .mcaddon
 out
+
+dist
+!src/tools/command_tokenizer/dist

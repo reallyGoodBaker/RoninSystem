@@ -5050,7 +5050,7 @@ class MyController extends RoninPlayerController {
             if (!press) {
                 return;
             }
-            if (!player.hasTag('skill.slot.attack')) {
+            if (!Tag.hasTag(player, tags.skill.slot.attack)) {
                 stateTree.stateTree?.tryTransitionTo('p');
             }
         });

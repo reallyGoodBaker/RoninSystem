@@ -4,6 +4,7 @@ import { Tag } from "@ronin/core/tag"
 import { State, Task } from "./state"
 import type { StateTreeComponent } from "./stateTreeComponent"
 import { ReflectConfig } from "@ronin/core/architect/reflect"
+import { profiler } from "@ronin/core/profiler"
 
 export interface StateTreeEvent {
     readonly tag: Tag
