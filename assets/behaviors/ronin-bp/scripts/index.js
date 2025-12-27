@@ -2388,7 +2388,10 @@ class EventSignal {
      * @param callback
      */
     removeListener = (callback) => {
-        this._observers.splice(this._observers.indexOf(callback), 1);
+        const callbackIndex = this._observers.indexOf(callback);
+        if (callbackIndex !== -1) {
+            this._observers.splice(callbackIndex, 1);
+        }
     };
     trigger = (...args) => {
         this._observers.forEach(callback => callback.apply(undefined, args));
@@ -4416,7 +4419,9 @@ class StateTree extends EventInstigator {
                 return;
             }
         }
-        if (this._curState.keepCurrentState) ;
+        if (this._curState.keepCurrentState) {
+            return;
+        }
         const found = this.searchStateCanEnter(this._curState);
         if (!found) {
             this.resetStateTree();
@@ -4448,10 +4453,10 @@ class StateTree extends EventInstigator {
         pruning.push(curState);
         return this.searchStateCanEnter(root, pruning, curState.parent);
     }
-    update() {
+    async update() {
         if (this._taskFinished) {
-            this.executeTasks();
-            this._taskFinished = false;
+            if (await this.executeTasks() == false)
+                this._taskFinished = false;
         }
         if (
         // 强制触发状态过渡
@@ -4584,7 +4589,6 @@ class AnimSequence {
         this.isPlaying = true;
         const pawn = this.layers.animComp.actor;
         this._animOwner = pawn;
-        profiler.info(this.animation, pawn.entity);
         pawn.entity?.playAnimation(this.animation);
         this.onStart(layers);
     }
@@ -4599,6 +4603,7 @@ class AnimSequence {
         }
         this.onUpdate(layers);
         const offsetTick = this.ticksPlayed++;
+        this.callNotify(offsetTick);
         if (offsetTick == this.duration) {
             if (this.playingType === AnimPlayingType.Once) {
                 this.finished = true;
@@ -4615,7 +4620,6 @@ class AnimSequence {
             }
             this.ticksPlayed = 0;
         }
-        this.callNotify(offsetTick);
     }
     findNotify(tick) {
         return this.animNotifEvents.find(e => e.tick === tick);
@@ -4911,19 +4915,20 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     notifyDamage() {
     }
     onStart() {
-        this.getOwner().addTags('skill.slot.attack');
+        this.getOwner().addTags(tags.skill.slot.attack);
     }
     onStopped() {
-        this.getOwner().removeTags('skill.slot.attack');
+        this.getOwner().removeTags(tags.skill.slot.attack);
     }
-    inputAttack() {
+    inputAttack = () => {
         const owner = this.getOwner();
         const tree = owner.getComponent(StateTreeComponent).stateTree;
+        tree.finishTasks();
         tree.getCurrentState().OnStateTreeEvent.call({
             tag: tags.skill.slot.attack,
             targetActor: owner,
         }, tree);
-    }
+    };
     stateComboStart() {
         const controller = this.getOwner().getController();
         controller.OnAttack.addListener(this.inputAttack);
@@ -4931,6 +4936,9 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     stateComboEnd() {
         const controller = this.getOwner().getController();
         controller.OnAttack.removeListener(this.inputAttack);
+    }
+    onEnd() {
+        this.stateComboEnd();
     }
 };
 MariePSequence = __decorate([
@@ -5074,9 +5082,7 @@ class MariePState extends State {
     taskNames = [MariePState.taskName];
     onEnter(stateTree, prevState) {
         this.OnStateTreeEvent.bind(ev => {
-            if (ev.tag.matchTag(tags.skill.slot.attack, true)) {
-                stateTree.tryTransitionTo('pp');
-            }
+            stateTree.tryTransitionTo('pp');
         });
     }
 }

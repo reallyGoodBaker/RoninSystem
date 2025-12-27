@@ -69,7 +69,6 @@ export abstract class AnimSequence {
 
         const pawn = <Pawn >this.layers.animComp.actor
         this._animOwner = pawn
-        profiler.info(this.animation, pawn.entity)
         pawn.entity?.playAnimation(this.animation)
 
         this.onStart(layers)
@@ -89,6 +88,8 @@ export abstract class AnimSequence {
         this.onUpdate(layers)
 
         const offsetTick = this.ticksPlayed++
+        this.callNotify(offsetTick)
+
         if (offsetTick == this.duration) {
             if (this.playingType === AnimPlayingType.Once) {
                 this.finished = true
@@ -107,8 +108,6 @@ export abstract class AnimSequence {
 
             this.ticksPlayed = 0
         }
-
-        this.callNotify(offsetTick)
     }
 
     findNotify(tick: number): AnimSeqEvent | undefined {

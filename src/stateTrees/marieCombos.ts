@@ -1,6 +1,5 @@
 import { MariePSequence } from "@/generated/ss/marieP"
 import { MariePpSequence } from "@/generated/ss/mariePp"
-import { tags } from "@ronin/config/tags"
 import { AnimationSequenceComponent } from "@ronin/plugins/animSeq/anim"
 import { State } from "@ronin/plugins/stateTree/state"
 import { StateTree } from "@ronin/plugins/stateTree/stateTree"
@@ -16,9 +15,7 @@ class MariePState extends State {
 
     onEnter(stateTree: StateTree, prevState: State): void {
         this.OnStateTreeEvent.bind(ev => {
-            if (ev.tag.matchTag(tags.skill.slot.attack, true)) {
-                stateTree.tryTransitionTo('pp')
-            }
+            stateTree.tryTransitionTo('pp')
         })
     }
 }

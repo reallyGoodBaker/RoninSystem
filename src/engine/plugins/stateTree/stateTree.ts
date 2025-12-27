@@ -4,7 +4,6 @@ import { Tag } from "@ronin/core/tag"
 import { State, Task } from "./state"
 import type { StateTreeComponent } from "./stateTreeComponent"
 import { ReflectConfig } from "@ronin/core/architect/reflect"
-import { profiler } from "@ronin/core/profiler"
 
 export interface StateTreeEvent {
     readonly tag: Tag
@@ -158,7 +157,7 @@ export class StateTree extends EventInstigator {
         }
 
         if (this._curState.keepCurrentState) {
-            
+            return
         }
 
         const found = this.searchStateCanEnter(this._curState)
@@ -200,10 +199,10 @@ export class StateTree extends EventInstigator {
         return this.searchStateCanEnter(root, pruning, curState.parent)
     }
 
-    update() {
+    async update() {
         if (this._taskFinished) {
-            this.executeTasks()
-            this._taskFinished = false
+            if (await this.executeTasks() == false)
+                this._taskFinished = false
         }
 
         if (

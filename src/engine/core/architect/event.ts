@@ -91,7 +91,10 @@ export class EventSignal<A extends unknown[] = unknown[]> {
      * @param callback 
      */
     removeListener = (callback: (...args: A) => void) => {
-        this._observers.splice(this._observers.indexOf(callback), 1)
+        const callbackIndex = this._observers.indexOf(callback)
+        if (callbackIndex !== -1) {
+            this._observers.splice(callbackIndex, 1)
+        }
     }
 
     trigger = (...args: A) => {

@@ -22,16 +22,17 @@ export class MariePSequence extends AnimSequence {
     }
 
     onStart(): void {
-        this.getOwner()!.addTags('skill.slot.attack')
+        this.getOwner()!.addTags(tags.skill.slot.attack)
     }
 
     onStopped(): void {
-        this.getOwner()!.removeTags('skill.slot.attack')
+        this.getOwner()!.removeTags(tags.skill.slot.attack)
     }
 
-    inputAttack() {
+    inputAttack = () => {
         const owner = this.getOwner()!
         const tree = owner.getComponent(StateTreeComponent).stateTree!
+        tree.finishTasks()
         tree.getCurrentState().OnStateTreeEvent.call({
             tag: tags.skill.slot.attack,
             targetActor: owner,
@@ -46,5 +47,9 @@ export class MariePSequence extends AnimSequence {
     protected stateComboEnd() {
         const controller = this.getOwner()!.getController() as MyController
         controller.OnAttack.removeListener(this.inputAttack)
+    }
+
+    onEnd(): void {
+        this.stateComboEnd()
     }
 }
