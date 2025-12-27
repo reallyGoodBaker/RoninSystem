@@ -7,6 +7,10 @@ import { ReflectConfig } from "@ronin/core/architect/reflect"
 
 export interface StateTreeEvent {
     readonly tag: Tag
+    /**
+     * 当你的事件从 Controller 上下文发送时（例如玩家输入）, `getOwner` 或 `.actor` 会错误返回 Controller 实例。
+     * 所以，请传递 targetActor 以便在事件监听器中获取实际发送事件的 Actor 实例
+     */
     readonly targetActor: Actor
 }
 
@@ -20,11 +24,11 @@ class RootState extends State {
     }
 }
 
-export class StateTree extends EventInstigator {
-    protected readonly Root = new RootState()
+export class StateTree extends EventInstigator<any> {
+    protected readonly root = new RootState()
     protected readonly tasks: Record<string, Task> = {}
 
-    protected _curState: State = this.Root
+    protected _curState: State
     protected _taskFinished = true
     protected _shouldTransition = true
 
@@ -33,11 +37,21 @@ export class StateTree extends EventInstigator {
     constructor(component: StateTreeComponent) {
         super()
         this.component = component
+        this._curState = this.root
         this.onStart()
     }
 
-    getOwner() {
-        return ReflectConfig.unsafeCtxActor()
+    sendStateEvent(event: StateTreeEvent) {
+        this.getCurrentState().OnStateTreeEvent.call(event, this)
+    }
+
+    /**
+     * 返回执行上下文中调用 StateTree 方法的 Actor 实例，
+     * 可能是 Controller 或 Pawn, 请不要依赖这个方法获得 Actor 实例
+     * @returns 
+     */
+    getOwner(): Actor {
+        return ReflectConfig.unsafeCtxActor() as any
     }
 
     getCurrentState() {
@@ -104,7 +118,7 @@ export class StateTree extends EventInstigator {
             return this._cachedStates[name]
         }
 
-        let curLevel: State[] = [ this.Root ]
+        let curLevel: State[] = [ this.root ]
         let children: State[] = []
         while (children = curLevel.map(state => state.children).flat()) {
             for (const state of curLevel) {
@@ -119,40 +133,56 @@ export class StateTree extends EventInstigator {
         }
     }
 
-    tryTransitionTo(nextState: string | State) {
+    async tryTransitionTo(nextState: string | State, finishTasks = true) {
         const state = this.searchState(nextState)
-        if (!state || !state.canEnter(this)) {
+        if (!state) {
             return false
+        }
+
+        if (finishTasks) {
+            this.finishTasks()
         }
 
         return this.transitionTo(state)
     }
 
-    protected transitionTo(state: State) {
+    protected async transitionTo(state: State) {
         const prevState = this._curState
-        try {
-            prevState.onExit?.(this, state)
-            this._curState = state
-            this._curState.onEnter?.(this, prevState)
-            return true
-        } catch {
-            return false   
-        }
+        const { promise, resolve } = Promise.withResolvers<boolean>()
+
+        this._preupdates.add(() => {
+            if (!state.canEnter(this)) {
+                return resolve(false)
+            }
+
+            try {
+                prevState.onExit?.(this, state)
+                this._curState = state
+                this._curState.onEnter?.(this, prevState)
+                resolve(true)
+            } catch {
+                resolve(false)
+            }
+        })
+
+        return promise
     }
 
     resetStateTree() {
-        this._curState = this.Root
+        this._curState = this.root
         this._taskFinished = true
         this._shouldTransition = true
     }
 
-    protected tryTransition() {
+    protected async tryTransition() {
         this._shouldTransition = false
 
-        const nextDefinedState = this._curState.canTransitionTo?.(this)
-        if (nextDefinedState) {
-            if (this.tryTransitionTo(nextDefinedState)) {
-                return
+        if (this._curState.tryTransitionEveryTick) {
+            const nextDefinedState = this._curState.canTransitionTo?.(this)
+            if (nextDefinedState) {
+                if (await this.tryTransitionTo(nextDefinedState)) {
+                    return
+                }
             }
         }
 
@@ -166,40 +196,65 @@ export class StateTree extends EventInstigator {
             return
         }
 
-        if (!this.transitionTo(found)) {
+        if (!(await this.transitionTo(found))) {
             this.resetStateTree()
         }
     }
 
-    private _isLeafNode(state: State) {
-        return state.children.length === 0
-    }
-
-    protected searchStateCanEnter(root: State, pruning: State[] = [], curState = root): State | null {
-        if (!curState) {
-            return null
+    private findLeaf(state: State): State | null {
+        if (state.children.length === 0) {
+            return state
         }
 
-        if (this._isLeafNode(curState)) {
-            return curState.canEnter(this) ? curState : null
-        }
-
-        for (const child of curState.children) {
-            if (pruning.includes(child)) {
-                continue
-            }
-
-            const result = this.searchStateCanEnter(root, pruning, child)
-            if (result) {
-                return result
+        for (const child of state.children) {
+            if (child.canEnter(this)) {
+                const leaf = this.findLeaf(child)
+                if (leaf) {
+                    return leaf
+                }
             }
         }
 
-        pruning.push(curState)
-        return this.searchStateCanEnter(root, pruning, curState.parent)
+        return null
     }
+
+    protected searchStateCanEnter(startState: State): State | null {
+        for (const child of startState.children) {
+            if (child.canEnter(this)) {
+                const leaf = this.findLeaf(child)
+                if (leaf) {
+                    return leaf
+                }
+            }
+        }
+
+        let curr = startState
+        while (curr.parent) {
+            const parent = curr.parent
+            for (const sibling of parent.children) {
+                if (sibling === curr) {
+                    continue
+                }
+
+                if (sibling.canEnter(this)) {
+                    const leaf = this.findLeaf(sibling)
+                    if (leaf) {
+                        return leaf
+                    }
+                }
+            }
+            curr = parent
+        }
+
+        return null
+    }
+
+    protected _preupdates = new Set<() => void>()
 
     async update() {
+        this._preupdates.forEach(preupdate => preupdate())
+        this._preupdates.clear()
+
         if (this._taskFinished) {
             if (await this.executeTasks() == false)
                 this._taskFinished = false
@@ -217,5 +272,5 @@ export class StateTree extends EventInstigator {
         }
     }
 
-    onStart() {}
+    onStart() { }
 }

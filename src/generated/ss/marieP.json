@@ -4,7 +4,7 @@
     },
     "states": {
         "combo": [
-            0.3,
+            0.2,
             0.6
         ]
     },
@@ -14,7 +14,7 @@
             "name": "notifyDamage"
         },
         {
-            "tick": 6,
+            "tick": 4,
             "name": "stateComboStart"
         },
         {

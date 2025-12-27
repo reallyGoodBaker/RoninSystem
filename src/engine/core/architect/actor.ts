@@ -24,20 +24,20 @@ export class Actor extends TaggableObject implements Tickable {
     private readonly beforeNextTickCbs = new Set<CallableFunction>()
 
     readonly tickingGroup: string = 'actor'
-    readonly tags: string[] = []
+    readonly tags = new Set<string>()
 
     allowTicking: boolean = true
 
     getTags(): string[] {
-        return this.tags
+        return Array.from(this.tags)
     }
 
     addTag(tag: string): void {
-        this.tags.push(tag)
+        this.tags.add(tag)
     }
 
     removeTag(tag: string): void {
-        this.tags.splice(this.tags.indexOf(tag), 1)
+        this.tags.delete(tag)
     }
 
     addComponent(component: Component): Actor

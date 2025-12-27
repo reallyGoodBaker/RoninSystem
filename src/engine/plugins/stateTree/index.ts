@@ -86,14 +86,14 @@ export class StateTreePlugin implements IPlugin {
 
         profiler.registerCustomTypePrinter(State, state => {
             const {
-                name, payload, keepCurrentState,
-                tryTransitionEveryTick, transitionOnFinished, taskNames
+                name, payload, keepCurrentState, children,
+                tryTransitionEveryTick, transitionOnFinished, taskNames,
             } = state
 
             return `${TOKENS.ID + name + TOKENS.R}\n` + profiler.format({
                 name, payload, keepCurrentState,
-                tryTransitionEveryTick, transitionOnFinished, taskNames
-            })
+                tryTransitionEveryTick, transitionOnFinished, taskNames,
+            }) + profiler.format(children)
         })
     }
 }

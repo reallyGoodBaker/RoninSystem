@@ -1,7 +1,6 @@
 import { system, world } from '@minecraft/server'
 import { Resource, Resources } from '@ronin/core/architect/resorce'
 import { ObjectHelper } from '@ronin/utils/helpers/objectHelper'
-import { profiler } from './profiler'
 
 const isTag = Symbol('isTag')
 

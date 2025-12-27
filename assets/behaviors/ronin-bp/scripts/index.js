@@ -2762,16 +2762,16 @@ class Actor extends TaggableObject {
     components = new Map();
     beforeNextTickCbs = new Set();
     tickingGroup = 'actor';
-    tags = [];
+    tags = new Set();
     allowTicking = true;
     getTags() {
-        return this.tags;
+        return Array.from(this.tags);
     }
     addTag(tag) {
-        this.tags.push(tag);
+        this.tags.add(tag);
     }
     removeTag(tag) {
-        this.tags.splice(this.tags.indexOf(tag), 1);
+        this.tags.delete(tag);
     }
     addComponent(arg1, component) {
         if (Array.isArray(arg1)) {
@@ -4307,17 +4307,26 @@ class RootState extends State {
     }
 }
 class StateTree extends EventInstigator {
-    Root = new RootState();
+    root = new RootState();
     tasks = {};
-    _curState = this.Root;
+    _curState;
     _taskFinished = true;
     _shouldTransition = true;
     component;
     constructor(component) {
         super();
         this.component = component;
+        this._curState = this.root;
         this.onStart();
     }
+    sendStateEvent(event) {
+        this.getCurrentState().OnStateTreeEvent.call(event, this);
+    }
+    /**
+     * 返回执行上下文中调用 StateTree 方法的 Actor 实例，
+     * 可能是 Controller 或 Pawn, 请不要依赖这个方法获得 Actor 实例
+     * @returns
+     */
     getOwner() {
         return ReflectConfig.unsafeCtxActor();
     }
@@ -4374,7 +4383,7 @@ class StateTree extends EventInstigator {
         if (this._cachedStates[name]) {
             return this._cachedStates[name];
         }
-        let curLevel = [this.Root];
+        let curLevel = [this.root];
         let children = [];
         while (children = curLevel.map(state => state.children).flat()) {
             for (const state of curLevel) {
@@ -4387,36 +4396,48 @@ class StateTree extends EventInstigator {
             curLevel = children;
         }
     }
-    tryTransitionTo(nextState) {
+    async tryTransitionTo(nextState, finishTasks = true) {
         const state = this.searchState(nextState);
-        if (!state || !state.canEnter(this)) {
+        if (!state) {
             return false;
+        }
+        if (finishTasks) {
+            this.finishTasks();
         }
         return this.transitionTo(state);
     }
-    transitionTo(state) {
+    async transitionTo(state) {
         const prevState = this._curState;
-        try {
-            prevState.onExit?.(this, state);
-            this._curState = state;
-            this._curState.onEnter?.(this, prevState);
-            return true;
-        }
-        catch {
-            return false;
-        }
+        const { promise, resolve } = Promise.withResolvers();
+        this._preupdates.add(() => {
+            if (!state.canEnter(this)) {
+                return resolve(false);
+            }
+            try {
+                prevState.onExit?.(this, state);
+                this._curState = state;
+                this._curState.onEnter?.(this, prevState);
+                resolve(true);
+            }
+            catch {
+                resolve(false);
+            }
+        });
+        return promise;
     }
     resetStateTree() {
-        this._curState = this.Root;
+        this._curState = this.root;
         this._taskFinished = true;
         this._shouldTransition = true;
     }
-    tryTransition() {
+    async tryTransition() {
         this._shouldTransition = false;
-        const nextDefinedState = this._curState.canTransitionTo?.(this);
-        if (nextDefinedState) {
-            if (this.tryTransitionTo(nextDefinedState)) {
-                return;
+        if (this._curState.tryTransitionEveryTick) {
+            const nextDefinedState = this._curState.canTransitionTo?.(this);
+            if (nextDefinedState) {
+                if (await this.tryTransitionTo(nextDefinedState)) {
+                    return;
+                }
             }
         }
         if (this._curState.keepCurrentState) {
@@ -4427,33 +4448,55 @@ class StateTree extends EventInstigator {
             this.resetStateTree();
             return;
         }
-        if (!this.transitionTo(found)) {
+        if (!(await this.transitionTo(found))) {
             this.resetStateTree();
         }
     }
-    _isLeafNode(state) {
-        return state.children.length === 0;
-    }
-    searchStateCanEnter(root, pruning = [], curState = root) {
-        if (!curState) {
-            return null;
+    findLeaf(state) {
+        if (state.children.length === 0) {
+            return state;
         }
-        if (this._isLeafNode(curState)) {
-            return curState.canEnter(this) ? curState : null;
-        }
-        for (const child of curState.children) {
-            if (pruning.includes(child)) {
-                continue;
-            }
-            const result = this.searchStateCanEnter(root, pruning, child);
-            if (result) {
-                return result;
+        for (const child of state.children) {
+            if (child.canEnter(this)) {
+                const leaf = this.findLeaf(child);
+                if (leaf) {
+                    return leaf;
+                }
             }
         }
-        pruning.push(curState);
-        return this.searchStateCanEnter(root, pruning, curState.parent);
+        return null;
     }
+    searchStateCanEnter(startState) {
+        for (const child of startState.children) {
+            if (child.canEnter(this)) {
+                const leaf = this.findLeaf(child);
+                if (leaf) {
+                    return leaf;
+                }
+            }
+        }
+        let curr = startState;
+        while (curr.parent) {
+            const parent = curr.parent;
+            for (const sibling of parent.children) {
+                if (sibling === curr) {
+                    continue;
+                }
+                if (sibling.canEnter(this)) {
+                    const leaf = this.findLeaf(sibling);
+                    if (leaf) {
+                        return leaf;
+                    }
+                }
+            }
+            curr = parent;
+        }
+        return null;
+    }
+    _preupdates = new Set();
     async update() {
+        this._preupdates.forEach(preupdate => preupdate());
+        this._preupdates.clear();
         if (this._taskFinished) {
             if (await this.executeTasks() == false)
                 this._taskFinished = false;
@@ -4515,11 +4558,11 @@ class StateTreePlugin {
             `\n当前状态: ${profiler.format(stateTree.getCurrentState())}` +
             `\n当前任务: ${profiler.format(stateTree.getExecutingTasks())}`);
         profiler.registerCustomTypePrinter(State, state => {
-            const { name, payload, keepCurrentState, tryTransitionEveryTick, transitionOnFinished, taskNames } = state;
+            const { name, payload, keepCurrentState, children, tryTransitionEveryTick, transitionOnFinished, taskNames, } = state;
             return `${TOKENS$1.ID + name + TOKENS$1.R}\n` + profiler.format({
                 name, payload, keepCurrentState,
-                tryTransitionEveryTick, transitionOnFinished, taskNames
-            });
+                tryTransitionEveryTick, transitionOnFinished, taskNames,
+            }) + profiler.format(children);
         });
     }
 }
@@ -4724,6 +4767,7 @@ class AnimLayers {
     }
     update() {
         // 按优先级处理图层
+        // 当 override 存在时，base不处理
         if (this.processLayer(this.layers.override))
             return;
         this.processLayer(this.layers.base);
@@ -4734,9 +4778,10 @@ class AnimLayers {
     processLayer(layer) {
         if (layer.size === 0)
             return false;
+        const toDelete = new Set();
         for (const animSeq of layer) {
             if (animSeq.finished) {
-                layer.delete(animSeq);
+                toDelete.add(animSeq);
                 animSeq.restore();
                 continue;
             }
@@ -4746,6 +4791,9 @@ class AnimLayers {
             else {
                 animSeq.update(this);
             }
+        }
+        for (const animSeq of toDelete) {
+            layer.delete(animSeq);
         }
         return true;
     }
@@ -4857,7 +4905,7 @@ var notifies$1 = {
 };
 var states$1 = {
 	combo: [
-		0.3,
+		0.2,
 		0.6
 	]
 };
@@ -4867,7 +4915,7 @@ var events$1 = [
 		name: "notifyDamage"
 	},
 	{
-		tick: 6,
+		tick: 4,
 		name: "stateComboStart"
 	},
 	{
@@ -4881,6 +4929,11 @@ var dataAsset$1 = {
 	events: events$1};
 
 const tags = Tag.fromObject({
+    perm: {
+        input: {
+            attack: null,
+        },
+    },
     skill: {
         slot: {
             attack: null,
@@ -4915,30 +4968,17 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     notifyDamage() {
     }
     onStart() {
-        this.getOwner().addTags(tags.skill.slot.attack);
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
     }
-    onStopped() {
-        this.getOwner().removeTags(tags.skill.slot.attack);
-    }
-    inputAttack = () => {
-        const owner = this.getOwner();
-        const tree = owner.getComponent(StateTreeComponent).stateTree;
-        tree.finishTasks();
-        tree.getCurrentState().OnStateTreeEvent.call({
-            tag: tags.skill.slot.attack,
-            targetActor: owner,
-        }, tree);
-    };
     stateComboStart() {
-        const controller = this.getOwner().getController();
-        controller.OnAttack.addListener(this.inputAttack);
+        Tag.addTag(this.getOwner(), tags.perm.input.attack);
     }
     stateComboEnd() {
-        const controller = this.getOwner().getController();
-        controller.OnAttack.removeListener(this.inputAttack);
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
     }
-    onEnd() {
+    onStopped() {
         this.stateComboEnd();
+        Tag.addTag(this.getOwner(), tags.perm.input.attack);
     }
 };
 MariePSequence = __decorate([
@@ -4974,9 +5014,11 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     }
     onStart() {
         this.getOwner().addTags('skill.slot.attack');
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
     }
     onStopped() {
         this.getOwner().removeTags('skill.slot.attack');
+        Tag.addTag(this.getOwner(), tags.perm.input.attack);
     }
 };
 MariePpSequence = __decorate([
@@ -5053,13 +5095,17 @@ class MyController extends RoninPlayerController {
         super.setupInput();
         const player = this.getPawn();
         const animComp = player.getComponent(AnimationSequenceComponent);
-        const stateTree = player.getComponent(StateTreeComponent);
+        const stateTreeComp = player.getComponent(StateTreeComponent);
+        Tag.addTag(player, tags.perm.input.attack);
         this.OnAttack.on(async (press) => {
             if (!press) {
                 return;
             }
-            if (!Tag.hasTag(player, tags.skill.slot.attack)) {
-                stateTree.stateTree?.tryTransitionTo('p');
+            if (Tag.hasTag(player, tags.perm.input.attack, true)) {
+                stateTreeComp.stateTree.sendStateEvent({
+                    tag: tags.skill.slot.attack,
+                    targetActor: player,
+                });
             }
         });
         this.OnInteract.on(async (press) => {
@@ -5080,9 +5126,16 @@ class MariePState extends State {
         await animSeq?.playAnimSeq(MariePSequence.animation);
     }
     taskNames = [MariePState.taskName];
+    canEnter(stateTree) {
+        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true);
+    }
     onEnter(stateTree, prevState) {
-        this.OnStateTreeEvent.bind(ev => {
-            stateTree.tryTransitionTo('pp');
+        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack);
+        this.OnStateTreeEvent.bind(async (ev) => {
+            if (ev.tag === tags.skill.slot.attack) {
+                Tag.addTag(ev.targetActor, tags.skill.slot.attack);
+                await stateTree.tryTransitionTo('pp');
+            }
         });
     }
 }
@@ -5093,13 +5146,24 @@ class MariePpState extends State {
         await animSeq?.playAnimSeq(MariePpSequence.animation);
     }
     taskNames = [MariePpState.taskName];
+    canEnter(stateTree) {
+        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true);
+    }
+    onEnter(stateTree, prevState) {
+        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack);
+    }
 }
 class MarieTricksStateTree extends StateTree {
     onStart() {
         this.addTask(MariePState.taskName, MariePState.task);
         this.addTask(MariePpState.taskName, MariePpState.task);
-        this.Root.appendChild(new MariePState('p'));
-        this.Root.appendChild(new MariePpState('pp'));
+        this.root.appendChild(new MariePState('p'));
+        this.root.appendChild(new MariePpState('pp'));
+        this.root.OnStateTreeEvent.bind(ev => {
+            if (ev.tag === tags.skill.slot.attack) {
+                Tag.addTag(ev.targetActor, tags.skill.slot.attack);
+            }
+        });
     }
 }
 

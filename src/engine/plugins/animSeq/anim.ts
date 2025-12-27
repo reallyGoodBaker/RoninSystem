@@ -75,6 +75,7 @@ export class AnimLayers {
 
     update() {
         // 按优先级处理图层
+        // 当 override 存在时，base不处理
         if (this.processLayer(this.layers.override)) return
         this.processLayer(this.layers.base)
     }
@@ -85,9 +86,10 @@ export class AnimLayers {
     private processLayer(layer: Set<AnimSequence>): boolean {
         if (layer.size === 0) return false
 
+        const toDelete = new Set<AnimSequence>()
         for (const animSeq of layer) {
             if (animSeq.finished) {
-                layer.delete(animSeq)
+                toDelete.add(animSeq)
                 animSeq.restore()
                 continue
             }
@@ -97,6 +99,10 @@ export class AnimLayers {
             } else {
                 animSeq.update(this)
             }
+        }
+
+        for (const animSeq of toDelete) {
+            layer.delete(animSeq)
         }
 
         return true

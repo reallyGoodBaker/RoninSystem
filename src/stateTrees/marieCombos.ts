@@ -1,5 +1,7 @@
 import { MariePSequence } from "@/generated/ss/marieP"
 import { MariePpSequence } from "@/generated/ss/mariePp"
+import { tags } from "@ronin/config/tags"
+import { Tag } from "@ronin/core/tag"
 import { AnimationSequenceComponent } from "@ronin/plugins/animSeq/anim"
 import { State } from "@ronin/plugins/stateTree/state"
 import { StateTree } from "@ronin/plugins/stateTree/stateTree"
@@ -13,9 +15,17 @@ class MariePState extends State {
 
     taskNames: string[] = [ MariePState.taskName ]
 
+    canEnter(stateTree: StateTree): boolean {
+        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true)
+    }
+
     onEnter(stateTree: StateTree, prevState: State): void {
-        this.OnStateTreeEvent.bind(ev => {
-            stateTree.tryTransitionTo('pp')
+        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack)
+        this.OnStateTreeEvent.bind(async ev => {
+            if (ev.tag === tags.skill.slot.attack) {
+                Tag.addTag(ev.targetActor, tags.skill.slot.attack)
+                await stateTree.tryTransitionTo('pp')
+            }
         })
     }
 }
@@ -28,6 +38,14 @@ class MariePpState extends State {
     }
 
     taskNames: string[] = [ MariePpState.taskName ]
+
+    canEnter(stateTree: StateTree): boolean {
+        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true)
+    }
+
+    onEnter(stateTree: StateTree, prevState: State): void {
+        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack)
+    }
 }
 
 export class MarieTricksStateTree extends StateTree {
@@ -35,7 +53,12 @@ export class MarieTricksStateTree extends StateTree {
         this.addTask(MariePState.taskName, MariePState.task)
         this.addTask(MariePpState.taskName, MariePpState.task)
 
-        this.Root.appendChild(new MariePState('p'))
-        this.Root.appendChild(new MariePpState('pp'))
+        this.root.appendChild(new MariePState('p'))
+        this.root.appendChild(new MariePpState('pp'))
+        this.root.OnStateTreeEvent.bind(ev => {
+            if (ev.tag === tags.skill.slot.attack) {
+                Tag.addTag(ev.targetActor, tags.skill.slot.attack)
+            }
+        })
     }
 }

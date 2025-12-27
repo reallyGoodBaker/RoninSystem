@@ -1,6 +1,8 @@
 import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/animSeq/sequence'
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
 import dataAsset from './mariePp.json'
+import { Tag } from '@ronin/core/tag'
+import { tags } from '@ronin/config/tags'
 
 @AnimationSequence
 export class MariePpSequence extends AnimSequence {
@@ -20,9 +22,11 @@ export class MariePpSequence extends AnimSequence {
 
     onStart(): void {
         this.getOwner()!.addTags('skill.slot.attack')
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
     }
 
     onStopped(): void {
         this.getOwner()!.removeTags('skill.slot.attack')
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
     }
 }

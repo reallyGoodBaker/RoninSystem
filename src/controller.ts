@@ -13,15 +13,20 @@ export class MyController extends RoninPlayerController {
 
         const player = <RoninModPlayer> this.getPawn()
         const animComp = player.getComponent(AnimationSequenceComponent)
-        const stateTree = player.getComponent(StateTreeComponent)
+        const stateTreeComp = player.getComponent(StateTreeComponent)
+
+        Tag.addTag(player, tags.perm.input.attack)
 
         this.OnAttack.on(async press => {
             if (!press) {
                 return
             }
 
-            if (!Tag.hasTag(player, tags.skill.slot.attack)) {
-                stateTree.stateTree?.tryTransitionTo('p')
+            if (Tag.hasTag(player, tags.perm.input.attack, true)) {
+                stateTreeComp.stateTree!.sendStateEvent({
+                    tag: tags.skill.slot.attack,
+                    targetActor: player,
+                })
             }
         })
 

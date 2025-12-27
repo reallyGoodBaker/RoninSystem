@@ -2,8 +2,7 @@ import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/anim
 import { AnimationSequence, AnimLayers } from '@ronin/plugins/animSeq/anim'
 import dataAsset from './marieP.json'
 import { tags } from '@ronin/config/tags'
-import { StateTreeComponent } from '@ronin/plugins/stateTree/stateTreeComponent'
-import type { MyController } from '@/controller'
+import { Tag } from '@ronin/core/tag'
 
 @AnimationSequence
 export class MariePSequence extends AnimSequence {
@@ -22,34 +21,19 @@ export class MariePSequence extends AnimSequence {
     }
 
     onStart(): void {
-        this.getOwner()!.addTags(tags.skill.slot.attack)
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
+    }
+    
+    protected stateComboStart() {
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
+    }
+    
+    protected stateComboEnd() {
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
     }
 
     onStopped(): void {
-        this.getOwner()!.removeTags(tags.skill.slot.attack)
-    }
-
-    inputAttack = () => {
-        const owner = this.getOwner()!
-        const tree = owner.getComponent(StateTreeComponent).stateTree!
-        tree.finishTasks()
-        tree.getCurrentState().OnStateTreeEvent.call({
-            tag: tags.skill.slot.attack,
-            targetActor: owner,
-        }, tree)
-    }
-
-    protected stateComboStart() {
-        const controller = this.getOwner()!.getController() as MyController
-        controller.OnAttack.addListener(this.inputAttack)
-    }
-
-    protected stateComboEnd() {
-        const controller = this.getOwner()!.getController() as MyController
-        controller.OnAttack.removeListener(this.inputAttack)
-    }
-
-    onEnd(): void {
         this.stateComboEnd()
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
     }
 }
