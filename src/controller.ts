@@ -22,8 +22,8 @@ export class MyController extends RoninPlayerController {
                 return
             }
 
-            if (Tag.hasTag(player, tags.perm.input.attack, true)) {
-                stateTreeComp.stateTree!.sendStateEvent({
+            if (Tag.hasTag(player, tags.perm.input.attack, true) && stateTreeComp && stateTreeComp.stateTree) {
+                stateTreeComp.stateTree.sendStateEvent({
                     tag: tags.skill.slot.attack,
                     targetActor: player,
                 })
@@ -36,8 +36,10 @@ export class MyController extends RoninPlayerController {
             }
 
             profiler.info('start kick')
-            animComp.playAnimSeq(MarieKSequence.animation)
-            profiler.info(animComp.getPlayingAnimation())
+            if (animComp) {
+                animComp.playAnimSeq(MarieKSequence.animation)
+                profiler.info(animComp.getPlayingAnimation())
+            }
         })
     }
 }

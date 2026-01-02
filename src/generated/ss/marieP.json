@@ -22,5 +22,6 @@
             "name": "stateComboEnd"
         }
     ],
+    "options": {},
     "dataAsset": "marieP.ts"
 }

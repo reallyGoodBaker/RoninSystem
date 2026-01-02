@@ -9,5 +9,6 @@
             "name": "notifyDamage"
         }
     ],
+    "options": {},
     "dataAsset": "mariePp.ts"
 }

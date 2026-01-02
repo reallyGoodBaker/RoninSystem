@@ -69,6 +69,7 @@ interface AnimSeqData {
     notifies: Record<string, number>
     states: Record<string, [number, number]>
     events: AnimSeqEvent[]
+    options: PlayAnimationOptions
 }
 
 function getAnimSeqData(animSeq: AnimSeqMeta) {
@@ -76,7 +77,8 @@ function getAnimSeqData(animSeq: AnimSeqMeta) {
     const animSeqData: AnimSeqData = {
         notifies: animSeq.notifies,
         states: animSeq.states,
-        events: []
+        events: [],
+        options: {},
     }
 
     for (const k in notifies) {

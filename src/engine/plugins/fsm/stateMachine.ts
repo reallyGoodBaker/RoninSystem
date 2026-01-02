@@ -1,5 +1,6 @@
 import { Actor } from "@ronin/core/architect/actor"
 import { AttributeChangeTransition, IStateDef, IStateTransition, StateEvent, StateEventTransition, TagChangeTransition, TransitionTriggerType, StateTransition } from "./state"
+import { EventDelegate } from "@ronin/core/architect/event"
 import { profiler } from "@ronin/core/profiler"
 import type { Application } from "@ronin/core/architect/application"
 import { Tag } from "@ronin/core/tag"
@@ -15,6 +16,10 @@ export interface IStateMachineDefination {
 export function mixinStates(target: IStateMachineDefination, inheritFrom: IStateMachineDefination) {
     // Merge inheritFrom.states into target.states.
     // Keep inherited states first, then let target override fields.
+    // 合并规则说明：
+    // - 遍历 inherits 链（按 DFS 收集，父在前），按顺序合并 states；
+    // - 对于同名 state，先保留父的字段与 transitions，再用子 state 覆盖字段；
+    // - transitions 会被追加（父 transitions 在前，子 transitions 在后）。
     target.states = target.states ?? {}
     const result: Record<string, IStateDef> = {}
 
@@ -66,6 +71,8 @@ export class StateMachine {
             StateMachine._idToSM.delete(id)
         })
         : null
+    // fallback map 当环境不支持 WeakRef/FinalizationRegistry 时使用（强引用）
+    private static readonly _fallbackMap = new Map<Actor, StateMachine>()
 
     static forEach(fn: (sm: StateMachine) => void) {
         for (const entry of StateMachine._idToSM.values()) {
@@ -91,6 +98,13 @@ export class StateMachine {
     private _stateMachineDef: IStateMachineDefination | null = null
     // precomputed transitions buckets per state: stateName -> { trigger -> transitions[] }
     private _stateBuckets: Map<string, Partial<Record<TransitionTriggerType, StateTransition[]>>> = new Map()
+    // 重入保护：当正在执行 state 切换时，后续的切换请求会被排入队列，避免递归调用 enter/exit
+    private _changing: boolean = false
+    private _pendingStateQueue: string[] = []
+
+    // 使用 EventDelegate 实现的状态变化事件（只能绑定一个回调）
+    // 触发签名：[oldState: string, newState: string]
+    readonly OnStateChanged = new EventDelegate<[string, string]>()
 
     constructor(
         public readonly owner: Actor,
@@ -99,26 +113,72 @@ export class StateMachine {
         // register in hybrid registry
         try {
             const id = Symbol()
+            this._registerId = id
             StateMachine._actorToId.set(owner, id)
             const actorRef = (typeof (globalThis as any).WeakRef !== 'undefined') ? new (globalThis as any).WeakRef(owner) : undefined
             StateMachine._idToSM.set(id, { sm: this, actorRef })
             if (StateMachine._finalizer) {
+                // 使用 id 作为 holdings（不使用 unregister token），FinalizationRegistry 回调会删除 id
                 StateMachine._finalizer.register(owner, id)
             }
         } catch (e) {
             // fallback: if WeakRef/FinalizationRegistry not available, keep a strong Map using actor as key
-            ;(StateMachine as any).stateMachines?.set?.(owner, this)
+            StateMachine._fallbackMap.set(owner, this)
         }
     }
 
+    // 存储注册 id（若使用 hybrid registry）以便 dispose 时清理
+    private _registerId?: symbol
+
     setStateMachineDef(def: IStateMachineDefination) {
-        // Build merged states first (transactional). Do not modify original def.states until validated.
+        // 合并继承定义并检测继承环（transactional）。合并顺序按照 inherits 列表的 DFS 顺序，
+        // 若检测到循环则中止安装并通过 onerror 报告。
         const mergedStates: Record<string, IStateDef> = {}
 
-        // Merge inherits in order
-        def.inherits?.forEach(id => {
-            const inheritDef = getStateMachineDef(id)
-            if (!inheritDef) return
+        const visited = new Set<string>()
+        const inStack = new Set<string>()
+        const inheritOrder: IStateMachineDefination[] = []
+
+        // DFS 收集继承链，检测环
+        const dfs = (id: string): boolean => {
+            if (inStack.has(id)) {
+                // 发现循环
+                this.onerror(new Error(`Inheritance cycle detected for state machine '${id}'`))
+                return false
+            }
+            if (visited.has(id)) return true
+            visited.add(id)
+            inStack.add(id)
+
+            const defn = getStateMachineDef(id)
+            if (!defn) {
+                // 如果找不到定义，记录并继续（不认为这是环）
+                inStack.delete(id)
+                return true
+            }
+
+            // 递归处理父继承
+            for (const pid of defn.inherits ?? []) {
+                if (!dfs(pid)) return false
+            }
+
+            inheritOrder.push(defn)
+            inStack.delete(id)
+            return true
+        }
+
+        // 启动 DFS：对当前 def.inherits 中的每个 id 执行
+        if (def.inherits) {
+            for (const id of def.inherits) {
+                if (!dfs(id)) {
+                    // 若检测到循环或 dfs 报错，abort
+                    return
+                }
+            }
+        }
+
+        // 按收集到的 inheritOrder 顺序合并 state（父在前）
+        for (const inheritDef of inheritOrder) {
             for (const [name, istate] of Object.entries(inheritDef.states ?? {})) {
                 const existing = mergedStates[name]
                 if (!existing) {
@@ -137,9 +197,9 @@ export class StateMachine {
                     }
                 }
             }
-        })
+        }
 
-        // Overlay def.states
+        // 最后 overlay 当前 def 的 states（子覆盖父，transitions 追加到父之后）
         for (const [name, tstate] of Object.entries(def.states ?? {})) {
             const inherited = mergedStates[name]
             if (inherited) {
@@ -170,12 +230,28 @@ export class StateMachine {
             return
         }
 
-        // Exit current state, then install new def and enter root state
+        // Exit current state, 然后安装新的定义并进入 root state
         this.callExit()
         this._stateMachineDef = newDef
-        // build buckets for fast lookup
+        // 构建并排序 buckets（通过方法实现，便于后续重建）
+        this.rebuildBuckets()
+
+        this._curState = newDef.rootState ?? 'unknown'
+        this.currentStateTicks = 0
+        this.callEnter()
+    }
+
+    protected currentStateTicks = 0
+
+    /**
+     * 重建所有 state 的 transition buckets（按 trigger 分桶并按 priority 排序）
+     */
+    rebuildBuckets() {
         this._stateBuckets.clear()
-        for (const [name, s] of Object.entries(newDef.states)) {
+        const def = this._stateMachineDef
+        if (!def) return
+
+        for (const [name, s] of Object.entries(def.states)) {
             const buckets: Partial<Record<TransitionTriggerType, StateTransition[]>> = {}
             for (const tr of s.transitions ?? []) {
                 const key = tr.trigger as TransitionTriggerType
@@ -186,22 +262,46 @@ export class StateMachine {
                 }
                 arr.push(tr as StateTransition)
             }
+
+            // 不对 bucket 做优先级排序（优先级特性未启用）
+
             this._stateBuckets.set(name, buckets)
         }
-
-        this._curState = newDef.rootState ?? 'unknown'
-        this.currentStateTicks = 0
-        this.callEnter()
     }
 
-    protected currentStateTicks = 0
+    /**
+     * 重建单个 state 的 buckets（如果需要在运行时局部刷新）
+     */
+    rebuildBucketsFor(stateName: string) {
+        const def = this._stateMachineDef
+        if (!def) return
+        const s = def.states[stateName]
+        if (!s) return
+
+        const buckets: Partial<Record<TransitionTriggerType, StateTransition[]>> = {}
+        for (const tr of s.transitions ?? []) {
+            const key = tr.trigger as TransitionTriggerType
+            let arr = buckets[key]
+            if (!arr) {
+                arr = []
+                buckets[key] = arr
+            }
+            arr.push(tr as StateTransition)
+        }
+
+        // 不对 bucket 做优先级排序（优先级特性未启用）
+
+        this._stateBuckets.set(stateName, buckets)
+    }
 
     resetStateMachine() {
-        this.callExit()
+        // 注意：reset 不再调用 callExit()，以避免在 exit 抛错时出现递归调用
         this._curState = 'unknown'
         this._stateMachineDef = null
         this.currentStateTicks = 0
         this._stateBuckets.clear()
+        this._pendingStateQueue.length = 0
+        this._changing = false
     }
 
     getState(state: string) {
@@ -218,12 +318,12 @@ export class StateMachine {
             this.currentState()?.exit?.(this.owner)
         } catch (error) {
             try {
-                this.onerror(error)
+                // 在错误中包含当前 state 名称以便定位
+                this.onerror({ error, state: this._curState, phase: 'exit' })
             } catch (error) {
                 defaultOnError(error)
-            } finally {
-                this.resetStateMachine()
             }
+            // 不在此处 resetStateMachine，以避免 exit 抛错导致递归调用
         }
     }
 
@@ -232,12 +332,12 @@ export class StateMachine {
             this.currentState()?.enter?.(this.owner)
         } catch (error) {
             try {
-                this.onerror(error)
+                // 在错误中包含当前 state 名称以便定位
+                this.onerror({ error, state: this._curState, phase: 'enter' })
             } catch (error) {
                 defaultOnError(error)
-            } finally {
-                this.resetStateMachine()
             }
+            // 同上，不在此处 resetStateMachine
         }
     }
 
@@ -250,7 +350,8 @@ export class StateMachine {
             }
 
             curState?.update?.(this.owner)
-            if (!curState.duration || this.currentStateTicks >= curState.duration) {
+            // 仅当 duration 为有效数字且大于 0 时才触发 OnEndOfState
+            if (typeof curState.duration === 'number' && curState.duration > 0 && this.currentStateTicks >= curState.duration) {
                 this.triggerCustom(true)
             }
         } catch (error) {
@@ -269,10 +370,69 @@ export class StateMachine {
      * @param state 
      */
     protected changeState(state: string) {
-        this.callExit()
-        this._curState = state
+        // 保护：确保目标 state 存在，避免切换到不存在的状态
+        if (!this.getState(state)) {
+            profiler.info(`Attempt to change to unknown state '${state}'`) 
+            return
+        }
+        // 如果已经在切换中，则把请求加入队列，等待当前切换完成后再处理
+        if (this._changing) {
+            this._pendingStateQueue.push(state)
+            return
+        }
+
+        // 开始切换流程，使用队列序列化所有切换请求，防止 reentrant
+        this._changing = true
+        let oldState = this._curState
+        try {
+            this.callExit()
+            this._curState = state
+            this.currentStateTicks = 0
+            this.callEnter()
+
+            // 成功切换后触发 EventDelegate（如果已绑定）
+            try {
+                this.OnStateChanged.call(oldState, this._curState)
+            } catch (cbErr) {
+                // 回调错误不应中断 FSM
+                profiler.info(cbErr)
+            }
+        } finally {
+            // 结束本次切换并处理队列中的下一个请求（如果有）
+            this._changing = false
+            if (this._pendingStateQueue.length > 0) {
+                const next = this._pendingStateQueue.shift() as string
+                // 通过递归调用 changeState 触发下一个（但此时 _changing 为 false）
+                this.changeState(next)
+            }
+        }
+    }
+
+    /**
+     * 销毁/注销当前 StateMachine 的注册，避免内存泄漏。
+     * 仅负责清理注册与内部状态，不会触发 state 回调。
+     */
+    dispose() {
+        try {
+            if (this._registerId) {
+                StateMachine._idToSM.delete(this._registerId)
+                StateMachine._actorToId.delete(this.owner)
+                this._registerId = undefined
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // fallback map 清理
+        StateMachine._fallbackMap.delete(this.owner)
+
+        // 清理内部状态
+        this._stateMachineDef = null
+        this._curState = 'unknown'
         this.currentStateTicks = 0
-        this.callEnter()
+        this._stateBuckets.clear()
+        this._pendingStateQueue.length = 0
+        this._changing = false
     }
 
     /**
@@ -281,16 +441,38 @@ export class StateMachine {
      * @returns 
      */
     protected canTransition(cond: IStateTransition) {
-        if (!cond.canTransition || cond.canTransition(this.owner)) {
-            const state = this.getState(cond.nextState)
-            if (!state) {
+        try {
+            if (cond.canTransition && !cond.canTransition(this.owner)) {
                 return false
             }
-
-            return !state.canEnter || state.canEnter(this.owner)
+        } catch (err) {
+            try {
+                this.onerror({ error: err, cond, phase: 'canTransition' })
+            } catch (e) {
+                defaultOnError(e)
+            }
+            return false
         }
 
-        return false
+        const state = this.getState(cond.nextState)
+        if (!state) {
+            return false
+        }
+
+        try {
+            if (state.canEnter && !state.canEnter(this.owner)) {
+                return false
+            }
+        } catch (err) {
+            try {
+                this.onerror({ error: err, state: cond.nextState, phase: 'canEnter' })
+            } catch (e) {
+                defaultOnError(e)
+            }
+            return false
+        }
+
+        return true
     }
 
     /**

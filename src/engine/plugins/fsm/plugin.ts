@@ -57,6 +57,12 @@ export class FinateStateMachineComponent extends Component {
     update(): void {
         this.stateMachine?.update()
     }
+
+    stop(): void {
+        // 组件停止时确保注销状态机，避免在不支持 FinalizationRegistry 的环境中泄漏
+        this.stateMachine?.dispose()
+        this.stateMachine = null
+    }
 }
 
 export class FinateStateMachinePlugin implements IPlugin {

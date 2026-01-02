@@ -29,7 +29,9 @@ export class DeterminationHudComponent extends Component {
 
     start(): void {
         const actionBar = this.getComponent(ActionBarComponent)
-        actionBar.messege.addContent(this.message)
+        if (actionBar && actionBar.message) {
+            actionBar.message.addContent(this.message)
+        }
         this.text.styles = [ Styles.White ]
 
         if (!(this.actor instanceof RoninModPlayer)) {

@@ -50,9 +50,9 @@ export abstract class Component<A extends Actor = Actor> {
         return this.removeComponent(this)
     }
 
-    getComponent<T extends Component>(cls: ConstructorOf<T>): T
-    getComponent<T extends Component>(name: string): T
-    getComponent<T extends Component>(arg: any): T {
+    getComponent<T extends Component>(cls: ConstructorOf<T>): T | undefined
+    getComponent<T extends Component>(name: string): T | undefined
+    getComponent<T extends Component>(arg: any): T | undefined {
         return this.actor.getComponent(arg)
     }
 

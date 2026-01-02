@@ -3,6 +3,7 @@ import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
 import dataAsset from './mariePp.json'
 import { Tag } from '@ronin/core/tag'
 import { tags } from '@ronin/config/tags'
+import { PlayAnimationOptions } from '@minecraft/server'
 
 @AnimationSequence
 export class MariePpSequence extends AnimSequence {
@@ -14,6 +15,7 @@ export class MariePpSequence extends AnimSequence {
     readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
     readonly notifies: Record<string, number> = dataAsset.notifies
     readonly states: Record<string, number[]> = dataAsset.states
+    readonly options: PlayAnimationOptions = dataAsset.options
 
 
     protected notifyDamage() {

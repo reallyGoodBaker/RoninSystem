@@ -22,5 +22,6 @@
             "name": "stateBlockingEnd"
         }
     ],
+    "options": {},
     "dataAsset": "marieK.ts"
 }

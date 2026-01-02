@@ -2589,6 +2589,11 @@ class Resources {
 }
 
 const isTag = Symbol('isTag');
+var TagEventType;
+(function (TagEventType) {
+    TagEventType[TagEventType["Add"] = 0] = "Add";
+    TagEventType[TagEventType["Remove"] = 1] = "Remove";
+})(TagEventType || (TagEventType = {}));
 class Tag {
     tag;
     static _tagMap = new Map();
@@ -2727,6 +2732,7 @@ class Tag {
     }
 }
 class TaggableObject {
+    OnTagChange = new EventSignal();
     hasTag(tag, exact = false) {
         return Tag.hasTag(this, tag, exact);
     }
@@ -2738,9 +2744,11 @@ class TaggableObject {
     }
     addTags(...tags) {
         Tag.addTags(this, tags);
+        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Add, Tag.of(tag)));
     }
     removeTags(...tags) {
         Tag.removeTags(this, tags);
+        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Remove, Tag.of(tag)));
     }
     discardTag(tag) {
         Tag.discardTag(tag);
@@ -3045,6 +3053,9 @@ class Pawn extends Actor {
     constructor(entityRef) {
         super(entityRef.id);
         this.entityRef = entityRef;
+    }
+    static isPawn(actor) {
+        return actor instanceof Pawn;
     }
     controller = null;
     onPossess(controller) {
@@ -3610,6 +3621,9 @@ class Application extends EventInstigator {
             profiler.error(error);
         }
         return actor;
+    }
+    isValidActor(actor) {
+        return this.actors.has(actor.id);
     }
     serverStarted = Promise.withResolvers();
     playerControllers = [];
@@ -4185,7 +4199,7 @@ class RoninPlugin {
     }
 }
 
-const StateTreeConfKey = 'Ronin.StateTreeConfig';
+const StateTreeConfigKey = 'Ronin.StateTreeConfig';
 class StateTreeComponent extends Component {
     allowTicking = true;
     stateTree;
@@ -4193,7 +4207,7 @@ class StateTreeComponent extends Component {
         this.stateTree?.update();
     }
     start() {
-        const conf = Application.getInst().getConfig(StateTreeConfKey, {});
+        const conf = Application.getInst().getConfig(StateTreeConfigKey, {});
         const entity = this.actor.entity;
         if (!entity) {
             return;
@@ -4549,7 +4563,7 @@ class StateTreePlugin {
         });
     }
     startModule(app) {
-        const conf = app.getConfig(StateTreeConfKey, {});
+        const conf = app.getConfig(StateTreeConfigKey, {});
         const spawn = app.getConfig('SpawnConfig');
         for (const k of Object.keys(conf)) {
             spawn.registerSpecifiedActorComponent(k, StateTreeComponent);
@@ -4632,7 +4646,7 @@ class AnimSequence {
         this.isPlaying = true;
         const pawn = this.layers.animComp.actor;
         this._animOwner = pawn;
-        pawn.entity?.playAnimation(this.animation);
+        pawn.entity?.playAnimation(this.animation, this.options);
         this.onStart(layers);
     }
     stop() {
@@ -4875,10 +4889,13 @@ var events$2 = [
 		name: "stateBlockingEnd"
 	}
 ];
+var options$2 = {
+};
 var dataAsset$2 = {
 	notifies: notifies$2,
 	states: states$2,
-	events: events$2};
+	events: events$2,
+	options: options$2};
 
 let MarieKSequence = class MarieKSequence extends AnimSequence {
     static animation = 'animation.ss.marie.k';
@@ -4889,6 +4906,7 @@ let MarieKSequence = class MarieKSequence extends AnimSequence {
     animNotifEvents = dataAsset$2.events;
     notifies = dataAsset$2.notifies;
     states = dataAsset$2.states;
+    options = dataAsset$2.options;
     notifyDamage() {
     }
     stateBlockingStart() {
@@ -4923,10 +4941,13 @@ var events$1 = [
 		name: "stateComboEnd"
 	}
 ];
+var options$1 = {
+};
 var dataAsset$1 = {
 	notifies: notifies$1,
 	states: states$1,
-	events: events$1};
+	events: events$1,
+	options: options$1};
 
 const tags = Tag.fromObject({
     perm: {
@@ -4965,6 +4986,7 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     animNotifEvents = dataAsset$1.events;
     notifies = dataAsset$1.notifies;
     states = dataAsset$1.states;
+    options = dataAsset$1.options;
     notifyDamage() {
     }
     onStart() {
@@ -4996,10 +5018,13 @@ var events = [
 		name: "notifyDamage"
 	}
 ];
+var options = {
+};
 var dataAsset = {
 	notifies: notifies,
 	states: states,
-	events: events};
+	events: events,
+	options: options};
 
 let MariePpSequence = class MariePpSequence extends AnimSequence {
     static animation = 'animation.ss.marie.pp';
@@ -5010,6 +5035,7 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     animNotifEvents = dataAsset.events;
     notifies = dataAsset.notifies;
     states = dataAsset.states;
+    options = dataAsset.options;
     notifyDamage() {
     }
     onStart() {
@@ -5167,12 +5193,580 @@ class MarieTricksStateTree extends StateTree {
     }
 }
 
+var TransitionTriggerType;
+(function (TransitionTriggerType) {
+    TransitionTriggerType[TransitionTriggerType["OnEndOfState"] = 0] = "OnEndOfState";
+    TransitionTriggerType[TransitionTriggerType["OnEvent"] = 1] = "OnEvent";
+    TransitionTriggerType[TransitionTriggerType["OnAttributeChange"] = 2] = "OnAttributeChange";
+    TransitionTriggerType[TransitionTriggerType["OnTagAdd"] = 3] = "OnTagAdd";
+    TransitionTriggerType[TransitionTriggerType["OnTagRemove"] = 4] = "OnTagRemove";
+    TransitionTriggerType[TransitionTriggerType["Custom"] = 5] = "Custom";
+})(TransitionTriggerType || (TransitionTriggerType = {}));
+
+const stateMachineMapping = new Map();
+function getStateMachineDef(id) {
+    return stateMachineMapping.get(id);
+}
+
+const defaultOnError = (error) => { profiler.info(error); };
+class StateMachine {
+    owner;
+    onerror;
+    // Use a hybrid registry so we can iterate active state machines while
+    // allowing actors to be GC'd without leaking StateMachine instances.
+    // - _idToSM: iterable map from id -> { sm, actorRef }
+    // - _actorToId: weak map from actor -> id
+    // - _finalizer: if available, cleanup id when actor is GC'd
+    static _idToSM = new Map();
+    static _actorToId = new WeakMap();
+    static _finalizer = (typeof globalThis.FinalizationRegistry !== 'undefined')
+        ? new globalThis.FinalizationRegistry((id) => {
+            StateMachine._idToSM.delete(id);
+        })
+        : null;
+    // fallback map 当环境不支持 WeakRef/FinalizationRegistry 时使用（强引用）
+    static _fallbackMap = new Map();
+    static forEach(fn) {
+        for (const entry of StateMachine._idToSM.values()) {
+            if (entry.sm)
+                fn(entry.sm);
+        }
+    }
+    static clearUnused(app) {
+        for (const [id, entry] of StateMachine._idToSM.entries()) {
+            const actor = entry.actorRef?.deref?.() ?? undefined;
+            if (!actor) {
+                StateMachine._idToSM.delete(id);
+                continue;
+            }
+            if (!app.isValidActor(actor)) {
+                StateMachine._idToSM.delete(id);
+            }
+        }
+    }
+    _curState = 'unknown';
+    _stateMachineDef = null;
+    // precomputed transitions buckets per state: stateName -> { trigger -> transitions[] }
+    _stateBuckets = new Map();
+    // 重入保护：当正在执行 state 切换时，后续的切换请求会被排入队列，避免递归调用 enter/exit
+    _changing = false;
+    _pendingStateQueue = [];
+    // 使用 EventDelegate 实现的状态变化事件（只能绑定一个回调）
+    // 触发签名：[oldState: string, newState: string]
+    OnStateChanged = new EventDelegate();
+    constructor(owner, onerror = defaultOnError) {
+        this.owner = owner;
+        this.onerror = onerror;
+        // register in hybrid registry
+        try {
+            const id = Symbol();
+            this._registerId = id;
+            StateMachine._actorToId.set(owner, id);
+            const actorRef = (typeof globalThis.WeakRef !== 'undefined') ? new globalThis.WeakRef(owner) : undefined;
+            StateMachine._idToSM.set(id, { sm: this, actorRef });
+            if (StateMachine._finalizer) {
+                // 使用 id 作为 holdings（不使用 unregister token），FinalizationRegistry 回调会删除 id
+                StateMachine._finalizer.register(owner, id);
+            }
+        }
+        catch (e) {
+            // fallback: if WeakRef/FinalizationRegistry not available, keep a strong Map using actor as key
+            StateMachine._fallbackMap.set(owner, this);
+        }
+    }
+    // 存储注册 id（若使用 hybrid registry）以便 dispose 时清理
+    _registerId;
+    setStateMachineDef(def) {
+        // 合并继承定义并检测继承环（transactional）。合并顺序按照 inherits 列表的 DFS 顺序，
+        // 若检测到循环则中止安装并通过 onerror 报告。
+        const mergedStates = {};
+        const visited = new Set();
+        const inStack = new Set();
+        const inheritOrder = [];
+        // DFS 收集继承链，检测环
+        const dfs = (id) => {
+            if (inStack.has(id)) {
+                // 发现循环
+                this.onerror(new Error(`Inheritance cycle detected for state machine '${id}'`));
+                return false;
+            }
+            if (visited.has(id))
+                return true;
+            visited.add(id);
+            inStack.add(id);
+            const defn = getStateMachineDef(id);
+            if (!defn) {
+                // 如果找不到定义，记录并继续（不认为这是环）
+                inStack.delete(id);
+                return true;
+            }
+            // 递归处理父继承
+            for (const pid of defn.inherits ?? []) {
+                if (!dfs(pid))
+                    return false;
+            }
+            inheritOrder.push(defn);
+            inStack.delete(id);
+            return true;
+        };
+        // 启动 DFS：对当前 def.inherits 中的每个 id 执行
+        if (def.inherits) {
+            for (const id of def.inherits) {
+                if (!dfs(id)) {
+                    // 若检测到循环或 dfs 报错，abort
+                    return;
+                }
+            }
+        }
+        // 按收集到的 inheritOrder 顺序合并 state（父在前）
+        for (const inheritDef of inheritOrder) {
+            for (const [name, istate] of Object.entries(inheritDef.states ?? {})) {
+                const existing = mergedStates[name];
+                if (!existing) {
+                    mergedStates[name] = {
+                        ...istate,
+                        transitions: (istate.transitions ?? []).slice(),
+                    };
+                }
+                else {
+                    mergedStates[name] = {
+                        ...existing,
+                        ...istate,
+                        transitions: [
+                            ...(existing.transitions ?? []),
+                            ...(istate.transitions ?? []),
+                        ],
+                    };
+                }
+            }
+        }
+        // 最后 overlay 当前 def 的 states（子覆盖父，transitions 追加到父之后）
+        for (const [name, tstate] of Object.entries(def.states ?? {})) {
+            const inherited = mergedStates[name];
+            if (inherited) {
+                mergedStates[name] = {
+                    ...inherited,
+                    ...tstate,
+                    transitions: [
+                        ...(inherited.transitions ?? []),
+                        ...(tstate.transitions ?? []),
+                    ],
+                };
+            }
+            else {
+                mergedStates[name] = {
+                    ...tstate,
+                    transitions: (tstate.transitions ?? []).slice(),
+                };
+            }
+        }
+        const newDef = {
+            ...def,
+            states: mergedStates,
+        };
+        if (!newDef.rootState || !newDef.states[newDef.rootState]) {
+            // invalid definition; report and abort
+            this.onerror(new Error(`Invalid state machine def: rootState '${newDef.rootState}' not found`));
+            return;
+        }
+        // Exit current state, 然后安装新的定义并进入 root state
+        this.callExit();
+        this._stateMachineDef = newDef;
+        // build buckets for fast lookup
+        this._stateBuckets.clear();
+        for (const [name, s] of Object.entries(newDef.states)) {
+            const buckets = {};
+            for (const tr of s.transitions ?? []) {
+                const key = tr.trigger;
+                let arr = buckets[key];
+                if (!arr) {
+                    arr = [];
+                    buckets[key] = arr;
+                }
+                arr.push(tr);
+            }
+            this._stateBuckets.set(name, buckets);
+        }
+        this._curState = newDef.rootState ?? 'unknown';
+        this.currentStateTicks = 0;
+        this.callEnter();
+    }
+    currentStateTicks = 0;
+    resetStateMachine() {
+        // 注意：reset 不再调用 callExit()，以避免在 exit 抛错时出现递归调用
+        this._curState = 'unknown';
+        this._stateMachineDef = null;
+        this.currentStateTicks = 0;
+        this._stateBuckets.clear();
+        this._pendingStateQueue.length = 0;
+        this._changing = false;
+    }
+    getState(state) {
+        return this._stateMachineDef?.states[state];
+    }
+    currentState() {
+        return this._stateMachineDef?.states[this._curState];
+    }
+    callExit() {
+        this.currentStateTicks = 0;
+        try {
+            this.currentState()?.exit?.(this.owner);
+        }
+        catch (error) {
+            try {
+                this.onerror(error);
+            }
+            catch (error) {
+                defaultOnError(error);
+            }
+            // 不在此处 resetStateMachine，以避免 exit 抛错导致递归调用
+        }
+    }
+    callEnter() {
+        try {
+            this.currentState()?.enter?.(this.owner);
+        }
+        catch (error) {
+            try {
+                this.onerror(error);
+            }
+            catch (error) {
+                defaultOnError(error);
+            }
+            // 同上，不在此处 resetStateMachine
+        }
+    }
+    update() {
+        this.currentStateTicks++;
+        try {
+            const curState = this.currentState();
+            if (!curState) {
+                return;
+            }
+            curState?.update?.(this.owner);
+            // 仅当 duration 为有效数字且大于 0 时才触发 OnEndOfState
+            if (typeof curState.duration === 'number' && curState.duration > 0 && this.currentStateTicks >= curState.duration) {
+                this.triggerCustom(true);
+            }
+        }
+        catch (error) {
+            try {
+                this.onerror(error);
+            }
+            catch (error) {
+                defaultOnError(error);
+            }
+            finally {
+                this.resetStateMachine();
+            }
+        }
+    }
+    /**
+     * 未经检查的状态切换
+     * @param state
+     */
+    changeState(state) {
+        // 如果已经在切换中，则把请求加入队列，等待当前切换完成后再处理
+        if (this._changing) {
+            this._pendingStateQueue.push(state);
+            return;
+        }
+        // 开始切换流程，使用队列序列化所有切换请求，防止 reentrant
+        this._changing = true;
+        let oldState = this._curState;
+        try {
+            this.callExit();
+            this._curState = state;
+            this.currentStateTicks = 0;
+            this.callEnter();
+            // 成功切换后触发 EventDelegate（如果已绑定）
+            try {
+                this.OnStateChanged.call(oldState, this._curState);
+            }
+            catch (cbErr) {
+                // 回调错误不应中断 FSM
+                profiler.info(cbErr);
+            }
+        }
+        finally {
+            // 结束本次切换并处理队列中的下一个请求（如果有）
+            this._changing = false;
+            if (this._pendingStateQueue.length > 0) {
+                const next = this._pendingStateQueue.shift();
+                // 通过递归调用 changeState 触发下一个（但此时 _changing 为 false）
+                this.changeState(next);
+            }
+        }
+    }
+    /**
+     * 销毁/注销当前 StateMachine 的注册，避免内存泄漏。
+     * 仅负责清理注册与内部状态，不会触发 state 回调。
+     */
+    dispose() {
+        try {
+            if (this._registerId) {
+                StateMachine._idToSM.delete(this._registerId);
+                StateMachine._actorToId.delete(this.owner);
+                this._registerId = undefined;
+            }
+        }
+        catch (e) {
+            // ignore
+        }
+        // fallback map 清理
+        StateMachine._fallbackMap.delete(this.owner);
+        // 清理内部状态
+        this._stateMachineDef = null;
+        this._curState = 'unknown';
+        this.currentStateTicks = 0;
+        this._stateBuckets.clear();
+        this._pendingStateQueue.length = 0;
+        this._changing = false;
+    }
+    /**
+     * 会同时检查 canTransition 和 canEnter
+     * @param cond
+     * @returns
+     */
+    canTransition(cond) {
+        if (!cond.canTransition || cond.canTransition(this.owner)) {
+            const state = this.getState(cond.nextState);
+            if (!state) {
+                return false;
+            }
+            return !state.canEnter || state.canEnter(this.owner);
+        }
+        return false;
+    }
+    /**
+     * `Custom` 和 `OnEnd` 的触发函数
+     *
+     * 区别在于，Custom 是由外部主动触发的，而 OnEnd 是在当前状态结束时自动触发
+     * @returns
+     */
+    triggerCustom(onEnd = false) {
+        const cur = this.currentState();
+        if (!cur) {
+            return;
+        }
+        const trigger = onEnd ? TransitionTriggerType.OnEndOfState : TransitionTriggerType.Custom;
+        const buckets = this._stateBuckets.get(cur.name) ?? {};
+        const customConds = buckets[trigger] ?? [];
+        for (const customCond of customConds) {
+            if (customCond && this.canTransition(customCond)) {
+                return this.changeState(customCond.nextState);
+            }
+        }
+    }
+    /**
+     * `OnEvent` 的触发函数, 和 `Custom` 的区别是可以传递一个自定义事件对象
+     * @param type
+     * @param event
+     * @returns
+     */
+    triggerEvent(type, event) {
+        const cur = this.currentState();
+        if (!cur) {
+            return;
+        }
+        const buckets = this._stateBuckets.get(cur.name) ?? {};
+        const eventConds = (buckets[TransitionTriggerType.OnEvent] ?? []);
+        for (const eventCond of eventConds) {
+            const { event: _ev, nextState, filter } = eventCond;
+            if (_ev === type && (!filter || filter(this.owner, event)) && this.canTransition(eventCond)) {
+                return this.changeState(nextState);
+            }
+        }
+    }
+    /**
+     * 为属性变化特化的触发函数
+     * @param attribute
+     * @param value
+     * @param old
+     * @returns
+     */
+    triggerAttrChange(attribute, value, old) {
+        const cur = this.currentState();
+        if (!cur) {
+            return;
+        }
+        const buckets = this._stateBuckets.get(cur.name) ?? {};
+        const attrConds = (buckets[TransitionTriggerType.OnAttributeChange] ?? []);
+        for (const attrCond of attrConds) {
+            const { nextState, attribute: _attr, value: _valueMatcher } = attrCond;
+            if (attribute !== _attr) {
+                continue;
+            }
+            if (typeof _valueMatcher === 'function' && _valueMatcher(value, old)) {
+                return this.changeState(nextState);
+            }
+            if (value === _valueMatcher) {
+                return this.changeState(nextState);
+            }
+        }
+    }
+    triggerTagAdd(tag, exact = false) {
+        const cur = this.currentState();
+        if (!cur) {
+            return;
+        }
+        const buckets = this._stateBuckets.get(cur.name) ?? {};
+        const tagConds = (buckets[TransitionTriggerType.OnTagAdd] ?? []);
+        for (const tagCond of tagConds) {
+            if (tagCond && tagCond.tag.matchTag(tag, exact) && this.canTransition(tagCond)) {
+                return this.changeState(tagCond.nextState);
+            }
+        }
+    }
+    triggerTagRemove(tag, exact = false) {
+        const cur = this.currentState();
+        if (!cur) {
+            return;
+        }
+        const buckets = this._stateBuckets.get(cur.name) ?? {};
+        const tagConds = (buckets[TransitionTriggerType.OnTagRemove] ?? []);
+        for (const tagCond of tagConds) {
+            if (tagCond && tagCond.tag.matchTag(tag, exact) && this.canTransition(tagCond)) {
+                return this.changeState(tagCond.nextState);
+            }
+        }
+    }
+}
+
+class Attribute {
+    defaultValue;
+    _value;
+    _oldValue;
+    constructor(defaultValue) {
+        this.defaultValue = defaultValue;
+        this._value = defaultValue;
+        this._oldValue = defaultValue;
+    }
+    OnChange = new EventDelegate();
+    OnCalculated = new EventDelegate();
+    get oldValue() {
+        return this._oldValue;
+    }
+    get value() {
+        return this._value;
+    }
+    set value(newValue) {
+        if (newValue !== this._value) {
+            this.OnChange.call(this._value, this._oldValue);
+            this._oldValue = this._value;
+            this._value = newValue;
+            if (this.modifier) {
+                const newVal = this.modifier(this._value, this._oldValue);
+                if (newVal !== this._value) {
+                    this._value = newVal;
+                    this.OnCalculated.call(this._value, this._oldValue);
+                }
+            }
+        }
+    }
+    modifier;
+    Modifiers = {
+        Add(constVal) {
+            return (value, oldValue) => value + constVal;
+        },
+        Multiply(constVal) {
+            return (value, oldValue) => value * constVal;
+        },
+        Replace(constVal) {
+            return (value, oldValue) => constVal;
+        },
+        Subtract(constVal) {
+            return (value, oldValue) => value - constVal;
+        },
+        Divide(constVal) {
+            return (value, oldValue) => value / constVal;
+        },
+        Mod(constVal) {
+            return (value, oldValue) => value % constVal;
+        },
+        Clamp(min, max) {
+            return (value, oldValue) => Math.min(Math.max(value, min), max);
+        },
+    };
+}
+class AttributesComponent extends EventComponent {
+    init;
+    attributes = new Map();
+    constructor(init = {}) {
+        super();
+        this.init = init;
+        for (const [key, value] of Object.entries(init)) {
+            const attr = new Attribute(value);
+            this.attributes.set(key, attr);
+            attr.OnChange.bind((v, old) => this.trigger('onChange', key, v, old));
+            attr.OnCalculated.bind((v, old) => this.trigger('onCalculated', key, v, old));
+        }
+    }
+    get(key) {
+        return this.attributes.get(key)?.value;
+    }
+    set(key, value) {
+        const attr = this.attributes.get(key);
+        if (attr) {
+            attr.value = value;
+        }
+    }
+}
+
+const entityStateMachineMap = new Map();
+class FinateStateMachineComponent extends Component {
+    stateMachine = null;
+    allowTicking = true;
+    start() {
+        const stateMachine = new StateMachine(this.actor);
+        this.stateMachine = stateMachine;
+        const owner = this.actor;
+        if (Pawn.isPawn(owner)) {
+            const stateMachineId = entityStateMachineMap.get(owner.entity?.typeId);
+            if (!stateMachineId) {
+                return;
+            }
+            const fsmDef = getStateMachineDef(stateMachineId);
+            if (fsmDef) {
+                stateMachine.setStateMachineDef(fsmDef);
+            }
+        }
+        owner.OnTagChange.addListener((type, tag) => {
+            if (type === TagEventType.Add) {
+                stateMachine.triggerTagAdd(tag);
+            }
+            else {
+                stateMachine.triggerTagRemove(tag);
+            }
+        });
+        const attributesComp = owner.getComponent(AttributesComponent);
+        if (attributesComp) {
+            attributesComp.addListener('onCalculated', (name, v, old) => stateMachine.triggerAttrChange(name, v, old));
+        }
+    }
+    update() {
+        this.stateMachine?.update();
+    }
+    stop() {
+        // 组件停止时确保注销状态机，避免在不支持 FinalizationRegistry 的环境中泄漏
+        this.stateMachine?.dispose();
+        this.stateMachine = null;
+    }
+}
+class FinateStateMachinePlugin {
+    name = 'fsm';
+    description = '有限状态机插件';
+    startModule(app) {
+        registerPlayerComponent(FinateStateMachineComponent);
+    }
+}
+
 let MyMod = class MyMod extends ModBase {
     start(app) {
-        app.setConfig(StateTreeConfKey, {
+        app.setConfig(StateTreeConfigKey, {
             'minecraft:player': MarieTricksStateTree
         });
-        app.loadPlugin(RoninPlugin, StateTreePlugin, AnimationSequencePlugin);
+        app.loadPlugin(RoninPlugin, StateTreePlugin, AnimationSequencePlugin, FinateStateMachinePlugin);
         registerPlayerController(MyController);
     }
 };

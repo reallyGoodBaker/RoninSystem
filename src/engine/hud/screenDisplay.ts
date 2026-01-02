@@ -4,13 +4,13 @@ import { Component } from "@ronin/core/architect/component"
 import { Pawn } from "@ronin/core/architect/pawn"
 
 export class ActionBarComponent extends Component<Pawn> {
-    readonly messege: MessageBlock = new MessageBlock('ActionBar.Root')
+    readonly message: MessageBlock = new MessageBlock('ActionBar.Root')
     allowTicking = true
 
     update(): void {
         const player = <Player> this.actor.entity
         if (player && player.onScreenDisplay.isValid) {
-            player.onScreenDisplay.setActionBar(this.messege.toString())
+            player.onScreenDisplay.setActionBar(this.message.toString())
         }
     }
 }
