@@ -1,5 +1,5 @@
 import { Actor } from "@ronin/core/architect/actor"
-import { AttributeChangeTransition, IStateDef, IStateTransition, StateEvent, StateEventTransition, TagChangeTransition, TransitionTriggerType } from "./state"
+import { AttributeChangeTransition, IStateDef, IStateTransition, StateEvent, StateEventTransition, TagChangeTransition, TransitionTriggerType, StateTransition } from "./state"
 import { profiler } from "@ronin/core/profiler"
 import type { Application } from "@ronin/core/architect/application"
 import { Tag } from "@ronin/core/tag"
@@ -13,50 +13,195 @@ export interface IStateMachineDefination {
 }
 
 export function mixinStates(target: IStateMachineDefination, inheritFrom: IStateMachineDefination) {
-    return Object.assign(target.states, inheritFrom.states)
+    // Merge inheritFrom.states into target.states.
+    // Keep inherited states first, then let target override fields.
+    target.states = target.states ?? {}
+    const result: Record<string, IStateDef> = {}
+
+    // copy inherited states
+    for (const [name, state] of Object.entries(inheritFrom.states ?? {})) {
+        result[name] = {
+            ...state,
+            transitions: (state.transitions ?? []).slice(),
+        }
+    }
+
+    // merge/override with target states: inherit transitions first, then target transitions
+    for (const [name, tstate] of Object.entries(target.states ?? {})) {
+        const inherited = result[name]
+        if (inherited) {
+            result[name] = {
+                ...inherited,
+                ...tstate,
+                transitions: [
+                    ...(inherited.transitions ?? []),
+                    ...(tstate.transitions ?? []),
+                ],
+            }
+        } else {
+            result[name] = {
+                ...tstate,
+                transitions: (tstate.transitions ?? []).slice(),
+            }
+        }
+    }
+
+    target.states = result
+    return target.states
 }
 
 const defaultOnError = (error: any) => { profiler.info(error) }
 
 
 export class StateMachine {
-    static readonly stateMachines = new Map<Actor, StateMachine>()
+    // Use a hybrid registry so we can iterate active state machines while
+    // allowing actors to be GC'd without leaking StateMachine instances.
+    // - _idToSM: iterable map from id -> { sm, actorRef }
+    // - _actorToId: weak map from actor -> id
+    // - _finalizer: if available, cleanup id when actor is GC'd
+    private static readonly _idToSM = new Map<symbol, { sm: StateMachine, actorRef?: any }>()
+    private static readonly _actorToId = new WeakMap<Actor, symbol>()
+    private static readonly _finalizer: any = (typeof (globalThis as any).FinalizationRegistry !== 'undefined')
+        ? new (globalThis as any).FinalizationRegistry((id: symbol) => {
+            StateMachine._idToSM.delete(id)
+        })
+        : null
+
+    static forEach(fn: (sm: StateMachine) => void) {
+        for (const entry of StateMachine._idToSM.values()) {
+            if (entry.sm) fn(entry.sm)
+        }
+    }
 
     static clearUnused(app: Application) {
-        for (const actor of StateMachine.stateMachines.keys()) {
-            if (!app.isValidActor(actor)) {
-                StateMachine.stateMachines.delete(actor)
+        for (const [id, entry] of StateMachine._idToSM.entries()) {
+            const actor = entry.actorRef?.deref?.() ?? undefined
+            if (!actor) {
+                StateMachine._idToSM.delete(id)
+                continue
             }
-        }   
+
+            if (!app.isValidActor(actor)) {
+                StateMachine._idToSM.delete(id)
+            }
+        }
     }
 
     private _curState: string = 'unknown'
     private _stateMachineDef: IStateMachineDefination | null = null
+    // precomputed transitions buckets per state: stateName -> { trigger -> transitions[] }
+    private _stateBuckets: Map<string, Partial<Record<TransitionTriggerType, StateTransition[]>>> = new Map()
 
     constructor(
         public readonly owner: Actor,
         private readonly onerror: (error: any) => void = defaultOnError
     ) {
-        StateMachine.stateMachines.set(owner, this)
+        // register in hybrid registry
+        try {
+            const id = Symbol()
+            StateMachine._actorToId.set(owner, id)
+            const actorRef = (typeof (globalThis as any).WeakRef !== 'undefined') ? new (globalThis as any).WeakRef(owner) : undefined
+            StateMachine._idToSM.set(id, { sm: this, actorRef })
+            if (StateMachine._finalizer) {
+                StateMachine._finalizer.register(owner, id)
+            }
+        } catch (e) {
+            // fallback: if WeakRef/FinalizationRegistry not available, keep a strong Map using actor as key
+            ;(StateMachine as any).stateMachines?.set?.(owner, this)
+        }
     }
 
     setStateMachineDef(def: IStateMachineDefination) {
-        this.resetStateMachine()
+        // Build merged states first (transactional). Do not modify original def.states until validated.
+        const mergedStates: Record<string, IStateDef> = {}
+
+        // Merge inherits in order
         def.inherits?.forEach(id => {
-            const stateMachine = getStateMachineDef(id)
-            if (stateMachine) {
-                mixinStates(def, stateMachine)
+            const inheritDef = getStateMachineDef(id)
+            if (!inheritDef) return
+            for (const [name, istate] of Object.entries(inheritDef.states ?? {})) {
+                const existing = mergedStates[name]
+                if (!existing) {
+                    mergedStates[name] = {
+                        ...istate,
+                        transitions: (istate.transitions ?? []).slice(),
+                    }
+                } else {
+                    mergedStates[name] = {
+                        ...existing,
+                        ...istate,
+                        transitions: [
+                            ...(existing.transitions ?? []),
+                            ...(istate.transitions ?? []),
+                        ],
+                    }
+                }
             }
         })
-        this._stateMachineDef = def
+
+        // Overlay def.states
+        for (const [name, tstate] of Object.entries(def.states ?? {})) {
+            const inherited = mergedStates[name]
+            if (inherited) {
+                mergedStates[name] = {
+                    ...inherited,
+                    ...tstate,
+                    transitions: [
+                        ...(inherited.transitions ?? []),
+                        ...(tstate.transitions ?? []),
+                    ],
+                }
+            } else {
+                mergedStates[name] = {
+                    ...tstate,
+                    transitions: (tstate.transitions ?? []).slice(),
+                }
+            }
+        }
+
+        const newDef: IStateMachineDefination = {
+            ...def,
+            states: mergedStates,
+        }
+
+        if (!newDef.rootState || !newDef.states[newDef.rootState]) {
+            // invalid definition; report and abort
+            this.onerror(new Error(`Invalid state machine def: rootState '${newDef.rootState}' not found`))
+            return
+        }
+
+        // Exit current state, then install new def and enter root state
+        this.callExit()
+        this._stateMachineDef = newDef
+        // build buckets for fast lookup
+        this._stateBuckets.clear()
+        for (const [name, s] of Object.entries(newDef.states)) {
+            const buckets: Partial<Record<TransitionTriggerType, StateTransition[]>> = {}
+            for (const tr of s.transitions ?? []) {
+                const key = tr.trigger as TransitionTriggerType
+                let arr = buckets[key]
+                if (!arr) {
+                    arr = []
+                    buckets[key] = arr
+                }
+                arr.push(tr as StateTransition)
+            }
+            this._stateBuckets.set(name, buckets)
+        }
+
+        this._curState = newDef.rootState ?? 'unknown'
+        this.currentStateTicks = 0
+        this.callEnter()
     }
 
     protected currentStateTicks = 0
 
     resetStateMachine() {
         this.callExit()
-        this._curState = this._stateMachineDef?.rootState ?? 'unknown'
+        this._curState = 'unknown'
         this._stateMachineDef = null
+        this.currentStateTicks = 0
+        this._stateBuckets.clear()
     }
 
     getState(state: string) {
@@ -126,6 +271,7 @@ export class StateMachine {
     protected changeState(state: string) {
         this.callExit()
         this._curState = state
+        this.currentStateTicks = 0
         this.callEnter()
     }
 
@@ -160,8 +306,9 @@ export class StateMachine {
         }
 
         const trigger = onEnd ? TransitionTriggerType.OnEndOfState : TransitionTriggerType.Custom
-        const customConds = cur.transitions.filter(t => t.trigger === trigger) as IStateTransition[]
-        for (const customCond of customConds) {
+        const buckets = this._stateBuckets.get(cur.name) ?? {}
+        const customConds = buckets[trigger] ?? []
+        for (const customCond of customConds as IStateTransition[]) {
             if (customCond && this.canTransition(customCond)) {
                 return this.changeState(customCond.nextState)
             }
@@ -180,7 +327,8 @@ export class StateMachine {
             return
         }
 
-        const eventConds = cur.transitions.filter(t => t.trigger === TransitionTriggerType.OnEvent) as StateEventTransition[]
+        const buckets = this._stateBuckets.get(cur.name) ?? {}
+        const eventConds = (buckets[TransitionTriggerType.OnEvent] ?? []) as StateEventTransition[]
         for (const eventCond of eventConds) {
             const { event: _ev, nextState, filter } = eventCond
             if (_ev === type && (!filter || filter(this.owner, event)) && this.canTransition(eventCond)) {
@@ -202,14 +350,15 @@ export class StateMachine {
             return
         }
 
-        const attrConds = cur.transitions.filter(t => t.trigger === TransitionTriggerType.OnAttributeChange) as AttributeChangeTransition[]
+        const buckets = this._stateBuckets.get(cur.name) ?? {}
+        const attrConds = (buckets[TransitionTriggerType.OnAttributeChange] ?? []) as AttributeChangeTransition[]
         for (const attrCond of attrConds) {
             const { nextState, attribute: _attr, value: _valueMatcher } = attrCond
             if (attribute !== _attr) {
                 continue
             }
 
-            if ('call' in _valueMatcher && _valueMatcher.call(undefined, value, old)) {
+            if (typeof _valueMatcher === 'function' && _valueMatcher(value, old)) {
                 return this.changeState(nextState)
             }
 
@@ -225,7 +374,8 @@ export class StateMachine {
             return
         }
 
-        const tagConds = cur.transitions.filter(t => t.trigger === TransitionTriggerType.OnTagAdd) as TagChangeTransition[]
+        const buckets = this._stateBuckets.get(cur.name) ?? {}
+        const tagConds = (buckets[TransitionTriggerType.OnTagAdd] ?? []) as TagChangeTransition[]
         for (const tagCond of tagConds) {
             if (tagCond && tagCond.tag.matchTag(tag, exact) && this.canTransition(tagCond)) {
                 return this.changeState(tagCond.nextState)
@@ -239,7 +389,8 @@ export class StateMachine {
             return
         }
 
-        const tagConds = cur.transitions.filter(t => t.trigger === TransitionTriggerType.OnTagRemove) as TagChangeTransition[]
+        const buckets = this._stateBuckets.get(cur.name) ?? {}
+        const tagConds = (buckets[TransitionTriggerType.OnTagRemove] ?? []) as TagChangeTransition[]
         for (const tagCond of tagConds) {
             if (tagCond && tagCond.tag.matchTag(tag, exact) && this.canTransition(tagCond)) {
                 return this.changeState(tagCond.nextState)
