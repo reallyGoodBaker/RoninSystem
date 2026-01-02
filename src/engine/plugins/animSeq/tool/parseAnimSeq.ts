@@ -2,6 +2,7 @@ import path from "path"
 import { resourcePath, RealRoot } from "../../../utils/tool/conf"
 import { walk } from "../../../utils/tool/file"
 import fs from 'fs'
+import { PlayAnimationOptions } from "@minecraft/server"
 
 export enum AnimPlayingType {
     Once = 0,
@@ -20,6 +21,7 @@ export interface AnimSeqMeta {
     animation: AnimationMeta
     notifies: Record<string, number>
     states: Record<string, [number, number]>
+    options: PlayAnimationOptions
 }
 
 function upperCamel(name: string) {
@@ -115,6 +117,7 @@ function animSeqCode(animSeqMeta: AnimSeqMeta) {
     const code =
 `import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/animSeq/sequence'
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
+import { PlayAnimationOptions } from "@minecraft/server"
 import dataAsset from './${fileName}.json'
 
 @AnimationSequence
@@ -127,6 +130,7 @@ export class ${className}Sequence extends AnimSequence {
     readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
     readonly notifies: Record<string, number> = dataAsset.notifies
     readonly states: Record<string, number[]> = dataAsset.states
+    readonly options: PlayAnimationOptions = dataAsset.options
 
 ${animSeqData.events.map(methodCode).join('\n')}
 }
@@ -188,7 +192,8 @@ function getAnimSeqMeta() {
                     const animSeq: AnimSeqMeta = {
                         animation: animMeta,
                         notifies: {},
-                        states: {}
+                        states: {},
+                        options: {}
                     }
 
                     notifies[k] = animSeq

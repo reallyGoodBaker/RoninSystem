@@ -1,7 +1,7 @@
 import { IPlugin } from "@ronin/core/architect/plugin"
 import { Application, IApplication } from "@ronin/core/architect/application"
 import { ConstructorOf } from "@ronin/core/types"
-import { StateTreeComponent, StateTreeConfKey } from "./stateTreeComponent"
+import { StateTreeComponent, StateTreeConfigKey } from "./stateTreeComponent"
 import { CustomCommand, Param } from "@ronin/utils/command"
 import { profiler } from "@ronin/core/profiler"
 import { StateTree } from "./stateTree"
@@ -72,7 +72,7 @@ export class StateTreePlugin implements IPlugin {
     }
 
     startModule(app: IApplication): void {
-        const conf = app.getConfig(StateTreeConfKey, {}) as Record<string, ConstructorOf<StateTree>>
+        const conf = app.getConfig(StateTreeConfigKey, {}) as Record<string, ConstructorOf<StateTree>>
         const spawn = app.getConfig('SpawnConfig') as SpawnConfig
         for (const k of Object.keys(conf)) {
             spawn.registerSpecifiedActorComponent(k, StateTreeComponent)

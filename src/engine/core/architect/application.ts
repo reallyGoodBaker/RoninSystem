@@ -144,6 +144,10 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
         return actor
     }
 
+    isValidActor(actor: Actor): boolean {
+        return this.actors.has(actor.id)
+    }
+
     readonly serverStarted = Promise.withResolvers<StartupEvent>()
     readonly playerControllers: PlayerController[] = []
 

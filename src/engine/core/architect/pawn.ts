@@ -9,6 +9,10 @@ export class Pawn extends Actor implements Possessable {
         super(entityRef.id)
     }
 
+    static isPawn(actor: Actor) {
+        return actor instanceof Pawn
+    }
+
     controller: Controller | null = null
 
     onPossess(controller: Controller): void {

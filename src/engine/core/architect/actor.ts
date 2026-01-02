@@ -86,9 +86,9 @@ export class Actor extends TaggableObject implements Tickable {
         return this
     }
 
-    getComponent<T extends Component>(cls: ConstructorOf<T>): T
-    getComponent<T extends Component>(name: string): T
-    getComponent<T extends Component>(arg: any): T {
+    getComponent<T extends Component>(cls: ConstructorOf<T>): T | undefined
+    getComponent<T extends Component>(name: string): T | undefined
+    getComponent<T extends Component>(arg: any): T | undefined {
         return this.components.get(
             typeof arg === 'string' ? arg : arg.name
         ) as T

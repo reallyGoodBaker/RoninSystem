@@ -1,6 +1,7 @@
 import { system, world } from '@minecraft/server'
 import { Resource, Resources } from '@ronin/core/architect/resorce'
 import { ObjectHelper } from '@ronin/utils/helpers/objectHelper'
+import { EventSignal } from './architect/event'
 
 const isTag = Symbol('isTag')
 
@@ -21,6 +22,12 @@ export type TagMapping<T> = T extends object
             : T[K] extends object ? TagMapping<T[K]>
             : never}
     : never
+
+export enum TagEventType {
+    Add,
+    Remove,
+}
+
 
 export class Tag {
     private static readonly _tagMap = new Map<string, Tag>()
@@ -198,6 +205,8 @@ export abstract class TaggableObject implements Taggable {
     abstract removeTag(tag: string): void
     abstract getTags(): string[]
 
+    readonly OnTagChange = new EventSignal<[ TagEventType, Tag ]>()
+
     hasTag(tag: string | Tag, exact = false): boolean {
         return Tag.hasTag(this, tag, exact)
     }
@@ -212,10 +221,12 @@ export abstract class TaggableObject implements Taggable {
 
     addTags(...tags: (string | Tag)[]): void {
         Tag.addTags(this, tags)
+        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Add, Tag.of(tag)))
     }
 
     removeTags(...tags: (string | Tag)[]): void {
         Tag.removeTags(this, tags)
+        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Remove, Tag.of(tag)))
     }
 
     discardTag(tag: string | Tag): void {

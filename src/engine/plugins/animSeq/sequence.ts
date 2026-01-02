@@ -4,6 +4,7 @@ import { EventSignal } from "@ronin/core/architect/event"
 import { profiler } from "@ronin/core/profiler"
 import { PROFIER_CONFIG } from '@ronin/config/profiler'
 import { ConstructorOf } from "@ronin/core/types"
+import { PlayAnimationOptions } from "@minecraft/server"
 
 const { ANIM: { TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG
 
@@ -31,6 +32,7 @@ export abstract class AnimSequence {
     abstract readonly animNotifEvents: AnimSeqEvent[]
     abstract readonly notifies: Record<string, number>
     abstract readonly states: Record<string, number[]>
+    abstract readonly options: PlayAnimationOptions
 
     readonly Onfinished = new EventSignal<[boolean]>()
     private _animOwner?: Pawn
@@ -69,7 +71,7 @@ export abstract class AnimSequence {
 
         const pawn = <Pawn >this.layers.animComp.actor
         this._animOwner = pawn
-        pawn.entity?.playAnimation(this.animation)
+        pawn.entity?.playAnimation(this.animation, this.options)
 
         this.onStart(layers)
     }
