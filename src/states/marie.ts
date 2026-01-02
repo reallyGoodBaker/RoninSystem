@@ -6,7 +6,7 @@ import { StateTransition, TransitionTriggerType } from "@ronin/plugins/fsm/state
 @StateMachineTemplate('ronin:marie', 'resume')
 export class MarieMoves {
 
-    @StateDef()
+    @StateDef(0)
     resume(): StateTransition[] {
         onEnter(() => {
             profiler.info('Marie is resuming')
@@ -20,7 +20,7 @@ export class MarieMoves {
         ]
     }
 
-    @StateDef(Infinity)
+    @StateDef()
     idle(): StateTransition[] {
         return [
             {

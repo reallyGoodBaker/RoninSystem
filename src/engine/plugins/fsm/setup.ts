@@ -38,7 +38,7 @@ let contextStateMachineDef: IStateMachineDefination | null = null
 let contextStateName: string | null = null
 let _canCallHooks = false
 
-export function StateDef(duration: number=0) {
+export function StateDef(duration: number=Infinity) {
     return (t: any, p: string) => {
         const stateMachine = getOrCreate(t.constructor)
 

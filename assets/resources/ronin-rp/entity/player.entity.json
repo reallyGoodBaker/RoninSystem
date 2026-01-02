@@ -42,6 +42,8 @@
                     "variable.leg_front": "public"
                 },
                 "initialize": [
+                    "v.attack_time = 0;",
+                    "v.is_first_person = 0;",
                     "v.arm_detector = query.bone_aabb('leftArm');",
                     "v.is_slim_arm = v.arm_detector.max.x == 2;",
 

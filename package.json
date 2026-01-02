@@ -10,13 +10,14 @@
         "watch": "npm run prebuild && rollup -c -w",
         "build-editor": "cd ./src/editor && rollup -c && npx @tailwindcss/cli -i ./style.css -o ../../dist/editor/style.css",
         "editor": "npm run build-editor && node ./dist/editor/server.cjs",
-        "build-addon": "npm run build && node ./dist/tools/bundleFiles.cjs"
+        "build-addon": "npm run build && node ./dist/tools/bundleFiles.cjs",
+        "docs": "npx typedoc --out docs/engine src/engine --tsconfig tsconfig.json --excludePrivate --excludeExternals --entryPointStrategy expand"
     },
     "author": "RGB39",
     "license": "MIT",
     "description": "An advanced combat system for Minecraft Bedrock Edition.",
     "devDependencies": {
-        "@minecraft/server": "^2.4.0-beta.1.21.123-stable",
+        "@minecraft/server": "^2.5.0-beta.1.21.131-stable",
         "@minecraft/server-ui": "^2.0.0",
         "@rollup/plugin-json": "^6.1.0",
         "@rollup/plugin-node-resolve": "^16.0.1",
@@ -30,7 +31,8 @@
         "ts-node": "^10.9.2",
         "tsconfig-replace-paths": "^0.0.14",
         "tslib": "^2.8.1",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "typedoc": "^0.28.15"
     },
     "dependencies": {
         "@minecraft/math": "^2.2.11",
@@ -49,4 +51,5 @@
         "typedi": "^0.10.0",
         "ws": "^8.18.3"
     }
+
 }
