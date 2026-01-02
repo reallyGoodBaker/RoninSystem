@@ -526,25 +526,28 @@ export class StateMachine {
      * @param old 
      * @returns 
      */
-    triggerAttrChange(attribute: string, value: any, old: any) {
+    triggerAttrChange<T = any>(attribute: string, value: T, old: T) {
         const cur = this.currentState()
         if (!cur) {
             return
         }
 
         const buckets = this._stateBuckets.get(cur.name) ?? {}
-        const attrConds = (buckets[TransitionTriggerType.OnAttributeChange] ?? []) as AttributeChangeTransition[]
+        const attrConds = (buckets[TransitionTriggerType.OnAttributeChange] ?? []) as AttributeChangeTransition<T>[]
         for (const attrCond of attrConds) {
             const { nextState, attribute: _attr, value: _valueMatcher } = attrCond
             if (attribute !== _attr) {
                 continue
             }
 
-            if (typeof _valueMatcher === 'function' && _valueMatcher(value, old)) {
-                return this.changeState(nextState)
-            }
-
-            if (value === _valueMatcher) {
+            if (typeof _valueMatcher === 'function') {
+                // 类型断言，因为当 T 是函数类型时，ValueMatcher<T> 可能是 T 本身，也可能是匹配函数
+                // 我们假设如果是函数，则它符合 (value: T, old: T) => boolean 签名
+                const matcherFn = _valueMatcher as (value: T, old: T) => boolean
+                if (matcherFn(value, old)) {
+                    return this.changeState(nextState)
+                }
+            } else if (value === _valueMatcher) {
                 return this.changeState(nextState)
             }
         }

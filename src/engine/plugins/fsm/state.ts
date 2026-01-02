@@ -27,16 +27,16 @@ export interface StateEventTransition extends IStateTransition {
     readonly filter?: (owner: Actor, event: StateEvent) => boolean
 }
 
-export interface AttributeChangeTransition extends IStateTransition {
+export interface AttributeChangeTransition<T = any> extends IStateTransition {
     readonly attribute: string
-    readonly value: ValueMatcher<object>
+    readonly value: ValueMatcher<T>
 }
 
 export interface TagChangeTransition extends IStateTransition {
     readonly tag: Tag
 }
 
-export type StateTransition = StateEventTransition | AttributeChangeTransition | IStateTransition | TagChangeTransition
+export type StateTransition = StateEventTransition | AttributeChangeTransition<any> | IStateTransition | TagChangeTransition
 export type ValueMatcher<T> = T | ((value: T, old: T) => boolean)
 
 export interface IStateDef {

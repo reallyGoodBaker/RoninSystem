@@ -36,6 +36,7 @@ export function StateMachineTemplate(
 
 let contextStateMachineDef: IStateMachineDefination | null = null
 let contextStateName: string | null = null
+let _canCallHooks = false
 
 export function StateDef(duration: number=0) {
     return (t: any, p: string) => {
@@ -43,19 +44,28 @@ export function StateDef(duration: number=0) {
 
         contextStateMachineDef = stateMachine
         contextStateName = p
-        contextStateMachineDef.states[p] = {
+        const stateDef = {
             name: p,
             duration,
         } as any
+        contextStateMachineDef.states[p] = stateDef
 
         const setupHandler = t[p as keyof typeof t] as Function
-        const transitions = setupHandler.call(undefined)
-
-        contextStateMachineDef.states[p].transitions = transitions
+        _canCallHooks = true
+        try {
+            const transitions = setupHandler.call(undefined)
+            stateDef.transitions = transitions
+        } finally {
+            _canCallHooks = false
+        }
     }
 }
 
 export function onEnter(fn: (actor: Actor) => void) {
+    if (!_canCallHooks) {
+        throw new Error("onEnter can only be called inside StateDef")
+    }
+
     if (!contextStateMachineDef || !contextStateName) {
         return
     }
@@ -64,6 +74,10 @@ export function onEnter(fn: (actor: Actor) => void) {
 }
 
 export function onExit(fn: (actor: Actor) => void) {
+    if (!_canCallHooks) {
+        throw new Error("onExit can only be called inside StateDef")
+    }
+
     if (!contextStateMachineDef || !contextStateName) {
         return
     }
@@ -72,6 +86,10 @@ export function onExit(fn: (actor: Actor) => void) {
 }
 
 export function onUpdate(fn: (actor: Actor) => void) {
+    if (!_canCallHooks) {
+        throw new Error("onUpdate can only be called inside StateDef")
+    }
+
     if (!contextStateMachineDef || !contextStateName) {
         return
     }
@@ -80,6 +98,10 @@ export function onUpdate(fn: (actor: Actor) => void) {
 }
 
 export function canEnter(fn: (actor: Actor) => boolean) {
+    if (!_canCallHooks) {
+        throw new Error("canEnter can only be called inside StateDef")
+    }
+
     if (!contextStateMachineDef || !contextStateName) {
         return
     }
