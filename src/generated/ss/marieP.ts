@@ -23,19 +23,19 @@ export class MariePSequence extends AnimSequence {
     }
 
     onStart(): void {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
     
     protected stateComboStart() {
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
     
     protected stateComboEnd() {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
 
     onStopped(): void {
         this.stateComboEnd()
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
 }

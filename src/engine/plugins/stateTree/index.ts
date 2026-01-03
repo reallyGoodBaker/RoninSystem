@@ -24,7 +24,7 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看 Pawn 状态树')
     show_state_tree(
-        @Param.Required('actor') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[]
     ) {
         const app = Application.getInst()
         pawn.forEach(entity => {
@@ -34,7 +34,7 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看状态树当前状态')
     state_tree_current_state(
-        @Param.Required('actor') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[]
     ) {
         const app = Application.getInst()
         pawn.forEach(entity => {
@@ -47,7 +47,7 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看状态树当前运行的任务')
     state_tree_current_tasks(
-        @Param.Required('actor') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[]
     ) {
         const app = Application.getInst()
         pawn.forEach(entity => {
@@ -60,7 +60,7 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看注册到状态树的所有任务')
     state_tree_tasks(
-        @Param.Required('actor') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[]
     ) {
         const app = Application.getInst()
         pawn.forEach(entity => {

@@ -1,7 +1,8 @@
-import { CommandPermissionLevel, CustomCommand, CustomCommandOrigin } from "@minecraft/server"
+import { CommandPermissionLevel, CustomCommand, CustomCommandOrigin, Entity } from "@minecraft/server"
 import { CommandHandlerOptions, CommandOptions, CommandRegistry } from "@ronin/core/command"
 import { Enum, Required, Optional } from '../../tools/command_tokenizer/dist/command_tokenizer'
 import { StringParamType } from '../core/command'
+import type { IApplication } from "@ronin/core/architect/application"
 
 enum ParamType {
     Enum = 0,
@@ -10,6 +11,7 @@ enum ParamType {
     Origin = 3,
     Success = 4,
     Fail = 5,
+    App = 6,
 }
 
 interface CommandParam {
@@ -28,7 +30,7 @@ interface CommandMeta {
     permissionLevel: CommandPermissionLevel
     cheatsRequired: boolean
     decoratedParams: CommandParam[]
-    wrapped: CallableFunction
+    wrapped: (app: IApplication) => (_: unknown, ev: CommandHandlerOptions) => void
 }
 
 const commandMetas = new Map<object, CommandMeta>()
@@ -42,7 +44,7 @@ function getMeta(obj: object) {
             permissionLevel: CommandPermissionLevel.GameDirectors,
             cheatsRequired: false,
             decoratedParams: [],
-            wrapped: Function.prototype,
+            wrapped: () => Function.prototype as any,
         }
         commandMetas.set(obj, meta)
     }
@@ -119,6 +121,13 @@ export namespace Param {
         })
     }
 
+    export const App: ParameterDecorator = (t: any, p: any, i) => {
+        getMeta(t[p]).decoratedParams.push({
+            index: i,
+            type: ParamType.App,
+        })
+    }
+
     export type SuccessOutput = (text: string) => void
     export type FailOutput = (text: string) => void
     export type Origin = CustomCommandOrigin
@@ -131,7 +140,7 @@ function registerCommandFromMeta({
     permissionLevel,
     cheatsRequired,
     wrapped
-}: CommandMeta): void {
+}: CommandMeta, app: IApplication): void {
     const parameters: (Enum | Required | Optional)[] = []
     let rawIndex = 0
 
@@ -165,13 +174,13 @@ function registerCommandFromMeta({
         permissionLevel,
         cheatsRequired,
         parameters,
-    }, wrapped as any)
+    }, wrapped(app))
 
 }
 
-export function registerAllFromAnnotations() {
+export function registerAllFromAnnotations(app: IApplication) {
     for (const meta of commandMetas.values()) {
-        registerCommandFromMeta(meta)
+        registerCommandFromMeta(meta, app)
     }
 
     commandMetas.clear()
@@ -189,12 +198,17 @@ export function CustomCommand(
         let meta = getMeta(fn)
         const { decoratedParams } = meta
 
-        function wrapped(_: unknown, { success, failure, origin, rawArgs }: CommandHandlerOptions) {
+        const wrapped = (app: IApplication) => (_: unknown, { success, failure, origin, rawArgs }: CommandHandlerOptions) => {
             const fnArgs: unknown[] = []
 
-            for (const { index, type, argIndex } of decoratedParams) {
+            for (const { index, type, argIndex, argType } of decoratedParams) {
                 if (type < 3) {
-                    fnArgs[index] = rawArgs[argIndex as number]
+                    if (argType === 'actor') {
+                        const entities = rawArgs[argIndex as number] as Entity[]
+                        fnArgs[index] = entities.map(en => app.getActor(en.id))
+                    } else {
+                        fnArgs[index] = rawArgs[argIndex as number]
+                    }
                     continue
                 }
 
@@ -209,6 +223,10 @@ export function CustomCommand(
 
                     case ParamType.Fail:
                         fnArgs[index] = failure
+                        continue
+
+                    case ParamType.App:
+                        fnArgs[index] = app
                         continue
                 }
 

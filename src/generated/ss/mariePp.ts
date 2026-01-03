@@ -24,11 +24,11 @@ export class MariePpSequence extends AnimSequence {
 
     onStart(): void {
         this.getOwner()!.addTags('skill.slot.attack')
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
 
     onStopped(): void {
         this.getOwner()!.removeTags('skill.slot.attack')
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack)
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
 }

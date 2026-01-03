@@ -74,9 +74,9 @@ export class Actor extends TaggableObject implements Tickable {
     }
 
     removeComponent(name: string): Actor
-    removeComponent(component: Component): Actor
+    removeComponent(component: ConstructorOf<Component>): Actor
     removeComponent(arg: any): Actor {
-        const key = typeof arg === 'string' ? arg : arg.constructor.name
+        const key = typeof arg === 'string' ? arg : arg.name
         const component = this.components.get(key)
         if (component) {
             component.detach?.()

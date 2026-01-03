@@ -10,7 +10,7 @@ class MariePState extends State {
     static taskName = 'p'
     static async task(tree: StateTree) {
         const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent)
-        await animSeq?.playAnimSeq(MariePSequence.animation)
+        await animSeq?.playAnimation(MariePSequence.animation)
     }
 
     taskNames: string[] = [ MariePState.taskName ]
@@ -34,7 +34,7 @@ class MariePpState extends State {
     static taskName = 'pp'
     static async task(tree: StateTree) {
         const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent)
-        await animSeq?.playAnimSeq(MariePpSequence.animation)
+        await animSeq?.playAnimation(MariePpSequence.animation)
     }
 
     taskNames: string[] = [ MariePpState.taskName ]

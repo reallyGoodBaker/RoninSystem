@@ -1,3 +1,5 @@
+import { GameMode } from "@minecraft/server";
+
 export const PROFIER_CONFIG = {
     SLOW: 6,
     FAST: 2.78,
@@ -30,6 +32,11 @@ export const PROFIER_CONFIG = {
             BAR_STYLE: '-',
             BAR_STYLE_START: '+',
             BAR_STYLE_END: '+',
-        }
+        },
+        PROGRESS: '§g'
+    },
+    RECEV_CONF: {
+        GAME_MODE: GameMode.Creative,
+        TAGS: [ 'profiler' ]
     }
 }

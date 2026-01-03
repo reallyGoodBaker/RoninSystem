@@ -79,13 +79,33 @@ export class MessageBlock {
         }
     }
 
+    findById(id: string) {
+        return this.content.find(content => {
+            if (typeof content === 'string') {
+                return false
+            } else {
+                return content.id === id
+            }
+        })
+    }
+
     createInline(id: string, text: string, styles: Styles[] = []): MessageBlock {
+        const existed = this.findById(id)
+        if (existed) {
+            return existed
+        }
+
         const msg = new MessageBlock(id, text.trim(), styles)
         this.addContent(msg)
         return msg
     }
 
     createBlock(id: string, text: string, styles: Styles[] = []): MessageBlock {
+        const existed = this.findById(id)
+        if (existed) {
+            return existed
+        }
+
         const msg = new MessageBlock(id, '\n' + text.trim(), styles)
         this.addContent(msg)
         return msg

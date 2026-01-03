@@ -10,7 +10,7 @@ function getOrCreate(cls: Function) {
         return def
     }
 
-    def = {} as IStateMachineDefination
+    def = { states: {} } as IStateMachineDefination
     stateMachineDefs.set(cls, def)
     return def
 }
@@ -19,6 +19,13 @@ export function getStateMachineDef(id: string) {
     return stateMachineMapping.get(id)
 }
 
+/**
+ * 定义状态机模板
+ * @param stateMachineId 
+ * @param rootState 
+ * @param inherits 
+ * @returns 
+ */
 export function StateMachineTemplate(
     stateMachineId: string,
     rootState: string,
@@ -29,7 +36,6 @@ export function StateMachineTemplate(
         def.id = stateMachineId
         def.rootState = rootState
         def.inherits = inherits
-        def.states = {}
         stateMachineMapping.set(stateMachineId, def)
     }
 }
@@ -38,6 +44,11 @@ let contextStateMachineDef: IStateMachineDefination | null = null
 let contextStateName: string | null = null
 let _canCallHooks = false
 
+/**
+ * 在 `StateMachineTemplate` 内定义状态
+ * @param duration Ticks 游戏刻数
+ * @returns 
+ */
 export function StateDef(duration: number=Infinity) {
     return (t: any, p: string) => {
         const stateMachine = getOrCreate(t.constructor)

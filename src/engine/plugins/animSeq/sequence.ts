@@ -3,10 +3,9 @@ import type { AnimLayers } from "./anim"
 import { EventSignal } from "@ronin/core/architect/event"
 import { profiler } from "@ronin/core/profiler"
 import { PROFIER_CONFIG } from '@ronin/config/profiler'
-import { ConstructorOf } from "@ronin/core/types"
 import { PlayAnimationOptions } from "@minecraft/server"
 
-const { ANIM: { TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG
+const { ANIM: { PROGRESS, TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG
 
 export enum AnimPlayingType {
     Once = 0,
@@ -116,6 +115,30 @@ export abstract class AnimSequence {
         return this.animNotifEvents.find(e => e.tick === tick)
     }
 
+    getNotifyStates(tick: number) {
+        const result = []
+        const _t = tick * 0.05
+        for (const [ name, [ start, end ] ] of Object.entries(this.states)) {
+            if (_t >= start && _t < end) {
+                result.push(name)
+            }
+        }
+
+        return result
+    }
+
+    getNotifies(tick: number) {
+        const result = []
+        const _t = tick * 0.05
+        for (const [ name, t ] of Object.entries(this.notifies)) {
+            if (_t >= t && _t < t + 0.05) {
+                result.push(name)
+            }
+        }
+
+        return result
+    }
+
     callNotify(tick: number) {
         const methodName = this.findNotify(tick)?.name as keyof this
         if (methodName in this) {
@@ -132,9 +155,36 @@ export abstract class AnimSequence {
     onEnd() {}
     onStopped(canceled: boolean) {}
 
+    static formatAnimSeq(animSeq: AnimSequence) {
+        const ticks = animSeq.ticksPlayed
+        const { animation, duration, playingType, notifies, states } = animSeq as AnimSequence
+        const scale = TRACK_WIDTH / duration
+        const progress = Math.round(ticks * scale)
+        const currentNotifies = animSeq.getNotifies(ticks)
+        const currentStates = animSeq.getNotifyStates(ticks)
+        const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
+            `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
+            Object.entries(notifies).map(([ name, t ]) => {
+                const tick = t * 20
+                const place = Math.floor(tick * scale)
+                return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${NOTIFY.COLOR}${NOTIFY.POINT_STYLE}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - 1))} ${TOKENS.R}${name}`
+            }).join('\n') + '\n' +
+            Object.entries(states).map(([ name, [ start, end ] ]) => {
+                const startTick = start * 20
+                const endTick = end * 20
+                const place = Math.floor(startTick * scale)
+                const stateLength = Math.floor((endTick - startTick) * scale)
+                return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${STATE.BAR_COLOR}${STATE.BAR_STYLE_START}${STATE.BAR_STYLE.repeat(stateLength)}${STATE.BAR_STYLE_END}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - stateLength - 2))} ${TOKENS.R}${name}`
+            }).join('\n') + '\n' +
+            `${PROGRESS}${TRACK_STYLE.repeat(progress)}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - progress))}` +
+            `\nNotifies: ${currentNotifies.join(', ') || 'None'}\n  States: ${currentStates.join(', ') || 'None'}`
+
+        return text
+    }
+
     static {
-        profiler.registerCustomTypePrinter(AnimSequence as ConstructorOf<AnimSequence>, animSeq => {
-            const { animation, duration, playingType, notifies, states } = animSeq
+        profiler.registerCustomTypePrinter<any>(AnimSequence, animSeq => {
+            const { animation, duration, playingType, notifies, states } = animSeq as AnimSequence
             const scale = TRACK_WIDTH / duration
             const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
                 `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +

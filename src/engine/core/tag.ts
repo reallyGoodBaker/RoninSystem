@@ -9,6 +9,7 @@ export interface Taggable {
     getTags(): string[]
     addTag(tag: string): void
     removeTag(tag: string): void
+    readonly OnTagChange: EventSignal<[ TagEventType, Tag ]>
 }
 
 /**
@@ -146,6 +147,7 @@ export class Tag {
 
         if (tagObj.isValid) {
             taggable.addTag(tagObj.tag)
+            taggable.OnTagChange.trigger(TagEventType.Add, tagObj)
         }
     }
 
@@ -158,6 +160,7 @@ export class Tag {
 
         taggable.removeTag(tagObj.tag)
         tagObj._childTag.delete(tagObj)
+        taggable.OnTagChange.trigger(TagEventType.Remove, tagObj)
     }
 
     static removeTags(taggable: Taggable, tags: (string | Tag)[]): void {
@@ -185,8 +188,8 @@ export class Tag {
     static fromObject<O extends object>(object: O): TagMapping<O> {
         return Resources.with(this.constructable, () => {
             ObjectHelper.traverse(object, (obj, key, parent, path) => {
+                const tag = this.from(path.join('.'))
                 if (obj === null) {
-                    const tag = this.from(path.join('.'))
                     if (!tag.isValid) {
                         return null
                     }
@@ -221,12 +224,10 @@ export abstract class TaggableObject implements Taggable {
 
     addTags(...tags: (string | Tag)[]): void {
         Tag.addTags(this, tags)
-        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Add, Tag.of(tag)))
     }
 
     removeTags(...tags: (string | Tag)[]): void {
         Tag.removeTags(this, tags)
-        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Remove, Tag.of(tag)))
     }
 
     discardTag(tag: string | Tag): void {

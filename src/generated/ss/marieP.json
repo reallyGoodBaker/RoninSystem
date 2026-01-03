@@ -5,7 +5,7 @@
     "states": {
         "combo": [
             0.2,
-            0.6
+            0.5
         ]
     },
     "events": [
@@ -18,7 +18,7 @@
             "name": "stateComboStart"
         },
         {
-            "tick": 12,
+            "tick": 10,
             "name": "stateComboEnd"
         }
     ],

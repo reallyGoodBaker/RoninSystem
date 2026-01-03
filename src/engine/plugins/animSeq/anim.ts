@@ -17,7 +17,7 @@ export class AnimLayers {
     /**
      * 播放动画序列
      */
-    async playAnimSeq(animSeq: AnimSequence, base = true) {
+    async playAnimation(animSeq: AnimSequence, base = true) {
         const layer = base ? this.layers.base : this.layers.override
         layer.add(animSeq)
 
@@ -43,7 +43,7 @@ export class AnimLayers {
      * 播放多个动画序列
      */
     playAnimSeqList(base = true, ...animSeqList: AnimSequence[]) {
-        return Promise.all(animSeqList.map(seq => this.playAnimSeq(seq, base)))
+        return Promise.all(animSeqList.map(seq => this.playAnimation(seq, base)))
     }
 
     /**
@@ -139,10 +139,10 @@ export class AnimationSequenceComponent extends Component {
         return animSeq
     }
 
-    async playAnimSeq(animName: string, base=true) {
+    async playAnimation(animName: string, base=true) {
         const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName)
         if (animSeq) {
-            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), base)
+            await this.animLayers.playAnimation(this.getOrCreateAnimSeq(animSeq), base)
         }
     }
 

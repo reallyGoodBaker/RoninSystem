@@ -4,7 +4,10 @@ export const namespace = 'sstag:'
 export const tags = Tag.fromObject({
     perm: {
         input: {
-            attack: null,
+            attack: {
+                normal: null,
+                special: null,
+            },
         },
     },
     skill: {

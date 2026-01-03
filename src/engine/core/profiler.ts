@@ -9,7 +9,8 @@ const {
     FAST_COLOR,
     SLOW_COLOR,
     MEDIUM_COLOR,
-    NUM_FIXED
+    NUM_FIXED,
+    RECEV_CONF
 } = PROFIER_CONFIG
 
 
@@ -59,7 +60,12 @@ class Profile {
 
 function _write(level: 'debug' | 'info' | 'warn' | 'error', message: string) {
     function _writeToDebuggers(message: string) {
-        system.run(() => world.sendMessage(message))
+        world.getPlayers({
+            gameMode: RECEV_CONF.GAME_MODE,
+            tags: RECEV_CONF.TAGS,
+        }).forEach(player => {
+            player.sendMessage(message)
+        })
     }
 
     switch (level) {
@@ -164,7 +170,7 @@ export function format(...message: any[]) {
                 }
 
                 if ('nameTag' in v) {
-                    return objectInfo.push(objField(TOKENS.ENT, k, `${v.typeId.replace('minecraft:', '')}{name=${v.nameTag}}`))
+                    return objectInfo.push(objField(TOKENS.ENT, k, `${v.nameTag}<${v.typeId}>`))
                 }
 
                 if ('typeId' in v) {

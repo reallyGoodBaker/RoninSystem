@@ -55,7 +55,7 @@ export function mixinStates(target: IStateMachineDefination, inheritFrom: IState
     return target.states
 }
 
-const defaultOnError = (error: any) => { profiler.info(error) }
+const defaultOnError = (error: any) => { profiler.error(error) }
 
 
 export class StateMachine {
@@ -241,7 +241,14 @@ export class StateMachine {
         this.callEnter()
     }
 
+    getStateNames() {
+        return Object.keys(this._stateMachineDef?.states ?? {})
+    }
+
     protected currentStateTicks = 0
+    get stateTicks() {
+        return this.currentStateTicks
+    }
 
     /**
      * 重建所有 state 的 transition buckets（按 trigger 分桶并按 priority 排序）
@@ -350,8 +357,7 @@ export class StateMachine {
             }
 
             curState?.update?.(this.owner)
-            // 仅当 duration 为有效数字且大于 0 时才触发 OnEndOfState
-            if (typeof curState.duration === 'number' && curState.duration > 0 && this.currentStateTicks >= curState.duration) {
+            if (this.currentStateTicks >= (curState.duration ?? Infinity)) {
                 this.triggerCustom(true)
             }
         } catch (error) {
@@ -503,7 +509,7 @@ export class StateMachine {
      * @param event 
      * @returns 
      */
-    triggerEvent(type: string, event: StateEvent) {
+    triggerEvent(type: string, event?: StateEvent) {
         const cur = this.currentState()
         if (!cur) {
             return
@@ -513,7 +519,7 @@ export class StateMachine {
         const eventConds = (buckets[TransitionTriggerType.OnEvent] ?? []) as StateEventTransition[]
         for (const eventCond of eventConds) {
             const { event: _ev, nextState, filter } = eventCond
-            if (_ev === type && (!filter || filter(this.owner, event)) && this.canTransition(eventCond)) {
+            if (_ev === type && (!filter || !event || filter(this.owner, event)) && this.canTransition(eventCond)) {
                 return this.changeState(nextState)
             }
         }

@@ -172,7 +172,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
             this.initialized = true
             Application.modApp?.start?.(this, ev)
             // 从装饰器中注册所有指令
-            registerAllFromAnnotations()
+            registerAllFromAnnotations(this)
             // start 进行指令注册
             CommandRegistry.registerAll(ev.customCommandRegistry)
 
@@ -304,7 +304,7 @@ export class Application extends EventInstigator<ApplicationEvents> implements I
 export class ApplicationCommands {
     @CustomCommand('查看 Actor')
     show_actor(
-        @Param.Required('actor', 'actors') entities: Entity[],
+        @Param.Required('entity', 'actors') entities: Entity[],
     ) {
         entities.map(entity => {
             const actor = Application.getInst().getActor(entity.id)
@@ -319,7 +319,7 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Player Controller / AI Controller')
     show_controller(
-        @Param.Required('actor', 'actors') entities: Entity[]
+        @Param.Required('entity', 'actors') entities: Entity[]
     ) {
         entities.forEach(entity => {
             const actor = Application.getInst().getActor(entity.id) as Pawn
@@ -333,7 +333,7 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Actor Components')
     show_components(
-        @Param.Required('actor', 'pawn') entities: Entity[]
+        @Param.Required('entity', 'pawn') entities: Entity[]
     ) {
         entities.forEach(entity => {
             const actor = Application.getInst().getActor(entity.id) as Pawn
@@ -347,7 +347,7 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Controller Components')
     show_controller_components(
-        @Param.Required('actor', 'pawn') entities: Entity[]
+        @Param.Required('entity', 'pawn') entities: Entity[]
     ) {
         entities.forEach(entity => {
             const actor = Application.getInst().getActor(entity.id) as Pawn

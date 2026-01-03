@@ -1,32 +1,32 @@
-import { profiler } from "@ronin/core/profiler"
 import { RoninPlayerController } from "@ronin/plugins/ronin/roninController"
 import { RoninModPlayer } from "@ronin/plugins/ronin/player"
-import { AnimationSequenceComponent } from "@ronin/plugins/animSeq/anim"
-import { MarieKSequence } from "./generated/ss/marieK"
 import { tags } from "@ronin/config/tags"
-import { StateTreeComponent } from "@ronin/plugins/stateTree/stateTreeComponent"
 import { Tag } from "@ronin/core/tag"
+import { FinateStateMachineComponent } from "@ronin/plugins/fsm/plugin"
 
 export class MyController extends RoninPlayerController {
     setupInput(): void {
         super.setupInput()
 
         const player = <RoninModPlayer> this.getPawn()
-        const animComp = player.getComponent(AnimationSequenceComponent)
-        const stateTreeComp = player.getComponent(StateTreeComponent)
+        const stateMachineComp = player.getComponent(FinateStateMachineComponent)
 
-        Tag.addTag(player, tags.perm.input.attack)
+        // 初始允许玩家进行攻击输入
+        Tag.addTag(player, tags.perm.input.attack.normal)
+        Tag.addTag(player, tags.perm.input.attack.special)
+
+        // 用来判断玩家是否可以进行攻击输入
+        // 这里并没有使用 normal / special, 是因为 Tag 的模糊匹配可以匹配父级标签
+        const attackPermTag = Tag.of('perm.input.attack')
 
         this.OnAttack.on(async press => {
             if (!press) {
                 return
             }
 
-            if (Tag.hasTag(player, tags.perm.input.attack, true) && stateTreeComp && stateTreeComp.stateTree) {
-                stateTreeComp.stateTree.sendStateEvent({
-                    tag: tags.skill.slot.attack,
-                    targetActor: player,
-                })
+            // 玩家被允许进行普通攻击输入时，添加普通攻击标签
+            if (Tag.hasTag(player, attackPermTag) && stateMachineComp?.stateMachine) {
+                Tag.addTag(player, tags.skill.slot.attack)
             }
         })
 
@@ -35,10 +35,9 @@ export class MyController extends RoninPlayerController {
                 return
             }
 
-            profiler.info('start kick')
-            if (animComp) {
-                animComp.playAnimSeq(MarieKSequence.animation)
-                profiler.info(animComp.getPlayingAnimation())
+            // 玩家被允许进行特殊攻击输入时，添加特殊攻击标签
+            if (Tag.hasTag(player, attackPermTag) && stateMachineComp?.stateMachine) {
+                Tag.addTag(player, tags.skill.slot.special)
             }
         })
     }

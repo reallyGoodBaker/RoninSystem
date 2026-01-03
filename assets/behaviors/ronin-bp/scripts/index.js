@@ -1,4 +1,4 @@
-import { CustomCommandParamType, CustomCommandStatus, CommandPermissionLevel, system, world, EntityEquippableComponent, EntityInventoryComponent, InputButton, ButtonState, HeldItemOption, EquipmentSlot, EntityHealthComponent } from '@minecraft/server';
+import { CustomCommandParamType, CustomCommandStatus, CommandPermissionLevel, system, world, GameMode, EntityEquippableComponent, EntityInventoryComponent, InputButton, ButtonState, HeldItemOption, EquipmentSlot, EntityHealthComponent } from '@minecraft/server';
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -1990,6 +1990,7 @@ var ParamType;
     ParamType[ParamType["Origin"] = 3] = "Origin";
     ParamType[ParamType["Success"] = 4] = "Success";
     ParamType[ParamType["Fail"] = 5] = "Fail";
+    ParamType[ParamType["App"] = 6] = "App";
 })(ParamType || (ParamType = {}));
 const commandMetas = new Map();
 function getMeta(obj) {
@@ -2001,7 +2002,7 @@ function getMeta(obj) {
             permissionLevel: CommandPermissionLevel.GameDirectors,
             cheatsRequired: false,
             decoratedParams: [],
-            wrapped: Function.prototype,
+            wrapped: () => Function.prototype,
         };
         commandMetas.set(obj, meta);
     }
@@ -2074,8 +2075,14 @@ var Param;
             type: ParamType.Optional,
         });
     };
+    Param.App = (t, p, i) => {
+        getMeta(t[p]).decoratedParams.push({
+            index: i,
+            type: ParamType.App,
+        });
+    };
 })(Param || (Param = {}));
-function registerCommandFromMeta({ decoratedParams, name, description, permissionLevel, cheatsRequired, wrapped }) {
+function registerCommandFromMeta({ decoratedParams, name, description, permissionLevel, cheatsRequired, wrapped }, app) {
     const parameters = [];
     let rawIndex = 0;
     for (const paramemter of decoratedParams.toReversed()) {
@@ -2103,11 +2110,11 @@ function registerCommandFromMeta({ decoratedParams, name, description, permissio
         permissionLevel,
         cheatsRequired,
         parameters,
-    }, wrapped);
+    }, wrapped(app));
 }
-function registerAllFromAnnotations() {
+function registerAllFromAnnotations(app) {
     for (const meta of commandMetas.values()) {
-        registerCommandFromMeta(meta);
+        registerCommandFromMeta(meta, app);
     }
     commandMetas.clear();
 }
@@ -2116,11 +2123,17 @@ function CustomCommand(description, permissionLevel = CommandPermissionLevel.Gam
         const fn = target[property];
         let meta = getMeta(fn);
         const { decoratedParams } = meta;
-        function wrapped(_, { success, failure, origin, rawArgs }) {
+        const wrapped = (app) => (_, { success, failure, origin, rawArgs }) => {
             const fnArgs = [];
-            for (const { index, type, argIndex } of decoratedParams) {
+            for (const { index, type, argIndex, argType } of decoratedParams) {
                 if (type < 3) {
-                    fnArgs[index] = rawArgs[argIndex];
+                    if (argType === 'actor') {
+                        const entities = rawArgs[argIndex];
+                        fnArgs[index] = entities.map(en => app.getActor(en.id));
+                    }
+                    else {
+                        fnArgs[index] = rawArgs[argIndex];
+                    }
                     continue;
                 }
                 switch (type) {
@@ -2133,10 +2146,13 @@ function CustomCommand(description, permissionLevel = CommandPermissionLevel.Gam
                     case ParamType.Fail:
                         fnArgs[index] = failure;
                         continue;
+                    case ParamType.App:
+                        fnArgs[index] = app;
+                        continue;
                 }
             }
             return fn(...fnArgs);
-        }
+        };
         meta.name = `${namespace}:${String(property)}`;
         meta.description = description;
         meta.permissionLevel = permissionLevel;
@@ -2688,6 +2704,7 @@ class Tag {
         const tagObj = Tag.of(tag);
         if (tagObj.isValid) {
             taggable.addTag(tagObj.tag);
+            taggable.OnTagChange.trigger(TagEventType.Add, tagObj);
         }
     }
     static addTags(taggable, tags) {
@@ -2697,6 +2714,7 @@ class Tag {
         const tagObj = Tag.of(tag);
         taggable.removeTag(tagObj.tag);
         tagObj._childTag.delete(tagObj);
+        taggable.OnTagChange.trigger(TagEventType.Remove, tagObj);
     }
     static removeTags(taggable, tags) {
         tags.forEach(tag => Tag.removeTag(taggable, tag));
@@ -2719,8 +2737,8 @@ class Tag {
     static fromObject(object) {
         return Resources.with(this.constructable, () => {
             ObjectHelper.traverse(object, (obj, key, parent, path) => {
+                const tag = this.from(path.join('.'));
                 if (obj === null) {
-                    const tag = this.from(path.join('.'));
                     if (!tag.isValid) {
                         return null;
                     }
@@ -2744,11 +2762,9 @@ class TaggableObject {
     }
     addTags(...tags) {
         Tag.addTags(this, tags);
-        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Add, Tag.of(tag)));
     }
     removeTags(...tags) {
         Tag.removeTags(this, tags);
-        tags.forEach(tag => this.OnTagChange.trigger(TagEventType.Remove, Tag.of(tag)));
     }
     discardTag(tag) {
         Tag.discardTag(tag);
@@ -2806,7 +2822,7 @@ class Actor extends TaggableObject {
         return this;
     }
     removeComponent(arg) {
-        const key = typeof arg === 'string' ? arg : arg.constructor.name;
+        const key = typeof arg === 'string' ? arg : arg.name;
         const component = this.components.get(key);
         if (component) {
             component.detach?.();
@@ -2902,16 +2918,26 @@ const PROFIER_CONFIG = {
             BAR_STYLE: '-',
             BAR_STYLE_START: '+',
             BAR_STYLE_END: '+',
-        }
+        },
+        PROGRESS: '§g'
+    },
+    RECEV_CONF: {
+        GAME_MODE: GameMode.Creative,
+        TAGS: ['profiler']
     }
 };
 
-const { TOKENS: TOKENS$3, FAST, SLOW, FAST_COLOR, SLOW_COLOR, MEDIUM_COLOR, NUM_FIXED } = PROFIER_CONFIG;
+const { TOKENS: TOKENS$2, FAST, SLOW, FAST_COLOR, SLOW_COLOR, MEDIUM_COLOR, NUM_FIXED, RECEV_CONF } = PROFIER_CONFIG;
 var profiler;
 (function (profiler) {
     function _write(level, message) {
         function _writeToDebuggers(message) {
-            system.run(() => world.sendMessage(message));
+            world.getPlayers({
+                gameMode: RECEV_CONF.GAME_MODE,
+                tags: RECEV_CONF.TAGS,
+            }).forEach(player => {
+                player.sendMessage(message);
+            });
         }
         switch (level) {
             case 'debug':
@@ -2930,15 +2956,15 @@ var profiler;
         _write(level, message);
     }
     const rawTypes = ['string', 'number', 'boolean', 'bigint', 'undefined', 'symbol'];
-    const objField = (type, k, v) => `  ${TOKENS$3.ID}${k}§r: ${type}${type === TOKENS$3.STR ? `'${v}'` : v}§r`;
-    const fnField = (name, isGetter = false) => `  ${isGetter ? TOKENS$3.GET : TOKENS$3.FN}${isGetter ? 'get ' : ''}${name ?? '[anonymous]'}§r()`;
+    const objField = (type, k, v) => `  ${TOKENS$2.ID}${k}§r: ${type}${type === TOKENS$2.STR ? `'${v}'` : v}§r`;
+    const fnField = (name, isGetter = false) => `  ${isGetter ? TOKENS$2.GET : TOKENS$2.FN}${isGetter ? 'get ' : ''}${name ?? '[anonymous]'}§r()`;
     const rawTypeMapping = {
-        string: TOKENS$3.STR,
-        number: TOKENS$3.NUM,
-        boolean: TOKENS$3.BOOL,
-        bigint: TOKENS$3.NUM,
+        string: TOKENS$2.STR,
+        number: TOKENS$2.NUM,
+        boolean: TOKENS$2.BOOL,
+        bigint: TOKENS$2.NUM,
         undefined: '§7',
-        symbol: TOKENS$3.STR
+        symbol: TOKENS$2.STR
     };
     const ignoredRawTypes = [
         Object.prototype,
@@ -3001,12 +3027,12 @@ var profiler;
                         return objectInfo.push(fnField(v.name));
                     }
                     if ('nameTag' in v) {
-                        return objectInfo.push(objField(TOKENS$3.ENT, k, `${v.typeId.replace('minecraft:', '')}{name=${v.nameTag}}`));
+                        return objectInfo.push(objField(TOKENS$2.ENT, k, `${v.nameTag}<${v.typeId}>`));
                     }
                     if ('typeId' in v) {
-                        return objectInfo.push(objField(TOKENS$3.ENT, k, v.typeId.replace('minecraft:', '')));
+                        return objectInfo.push(objField(TOKENS$2.ENT, k, v.typeId.replace('minecraft:', '')));
                     }
-                    return objectInfo.push(objField(TOKENS$3.CLASS, k, v?.constructor?.name || '{}'));
+                    return objectInfo.push(objField(TOKENS$2.CLASS, k, v?.constructor?.name || '{}'));
                 });
             } while (!ignoredRawTypes.includes(current = Reflect.getPrototypeOf(current)));
             objectInfo.unshift(`${m?.constructor?.name || ''} {}:`);
@@ -3040,7 +3066,7 @@ var profiler;
         const result = fn(...args);
         const end = Date.now();
         const duration = end - start;
-        info(`Task ${TOKENS$3.FN}${name}§r executed in ${duration < FAST ? FAST_COLOR
+        info(`Task ${TOKENS$2.FN}${name}§r executed in ${duration < FAST ? FAST_COLOR
             : duration < SLOW ? MEDIUM_COLOR
                 : SLOW_COLOR}${duration.toFixed(NUM_FIXED)}ms`);
         return result;
@@ -3528,7 +3554,7 @@ class SpawnConfig {
     }
 }
 
-const { TOKENS: TOKENS$2 } = PROFIER_CONFIG;
+const { TOKENS: TOKENS$1 } = PROFIER_CONFIG;
 class Application extends EventInstigator {
     actors = new Map();
     spawnConfig = SpawnConfig.getInst();
@@ -3644,7 +3670,7 @@ class Application extends EventInstigator {
             this.initialized = true;
             Application.modApp?.start?.(this, ev);
             // 从装饰器中注册所有指令
-            registerAllFromAnnotations();
+            registerAllFromAnnotations(this);
             // start 进行指令注册
             CommandRegistry.registerAll(ev.customCommandRegistry);
             const tryCreatePawnForPlayer = (player) => {
@@ -3776,13 +3802,13 @@ class ApplicationCommands {
     }
     show_plugins() {
         const messages = Array.from(Application.getInst().plugins.values())
-            .map(({ name, description }) => `\n${TOKENS$2.ID}${name}§r: ${TOKENS$2.STR}${description}`);
+            .map(({ name, description }) => `\n${TOKENS$1.ID}${name}§r: ${TOKENS$1.STR}${description}`);
         profiler.info(`已加载${messages.length}个插件:`, ...messages);
     }
 }
 __decorate([
     CustomCommand('查看 Actor'),
-    __param(0, Param.Required('actor', 'actors')),
+    __param(0, Param.Required('entity', 'actors')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
@@ -3795,21 +3821,21 @@ __decorate([
 ], ApplicationCommands.prototype, "show_actors", null);
 __decorate([
     CustomCommand('查看 Player Controller / AI Controller'),
-    __param(0, Param.Required('actor', 'actors')),
+    __param(0, Param.Required('entity', 'actors')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_controller", null);
 __decorate([
     CustomCommand('查看 Actor Components'),
-    __param(0, Param.Required('actor', 'pawn')),
+    __param(0, Param.Required('entity', 'pawn')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_components", null);
 __decorate([
     CustomCommand('查看 Controller Components'),
-    __param(0, Param.Required('actor', 'pawn')),
+    __param(0, Param.Required('entity', 'pawn')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
@@ -4078,12 +4104,30 @@ class MessageBlock {
             this.removeContent(index);
         }
     }
+    findById(id) {
+        return this.content.find(content => {
+            if (typeof content === 'string') {
+                return false;
+            }
+            else {
+                return content.id === id;
+            }
+        });
+    }
     createInline(id, text, styles = []) {
+        const existed = this.findById(id);
+        if (existed) {
+            return existed;
+        }
         const msg = new MessageBlock(id, text.trim(), styles);
         this.addContent(msg);
         return msg;
     }
     createBlock(id, text, styles = []) {
+        const existed = this.findById(id);
+        if (existed) {
+            return existed;
+        }
         const msg = new MessageBlock(id, '\n' + text.trim(), styles);
         this.addContent(msg);
         return msg;
@@ -4091,12 +4135,12 @@ class MessageBlock {
 }
 
 class ActionBarComponent extends Component {
-    messege = new MessageBlock('ActionBar.Root');
+    message = new MessageBlock('ActionBar.Root');
     allowTicking = true;
     update() {
         const player = this.actor.entity;
         if (player && player.onScreenDisplay.isValid) {
-            player.onScreenDisplay.setActionBar(this.messege.toString());
+            player.onScreenDisplay.setActionBar(this.message.toString());
         }
     }
 }
@@ -4120,7 +4164,9 @@ class DeterminationHudComponent extends Component {
     emptyText = '▎';
     start() {
         const actionBar = this.getComponent(ActionBarComponent);
-        actionBar.messege.addContent(this.message);
+        if (actionBar && actionBar.message) {
+            actionBar.message.addContent(this.message);
+        }
         this.text.styles = [Styles.White];
         if (!(this.actor instanceof RoninModPlayer)) {
             this.removeComponent(this);
@@ -4199,417 +4245,7 @@ class RoninPlugin {
     }
 }
 
-const StateTreeConfigKey = 'Ronin.StateTreeConfig';
-class StateTreeComponent extends Component {
-    allowTicking = true;
-    stateTree;
-    update() {
-        this.stateTree?.update();
-    }
-    start() {
-        const conf = Application.getInst().getConfig(StateTreeConfigKey, {});
-        const entity = this.actor.entity;
-        if (!entity) {
-            return;
-        }
-        const stateTreeCtor = conf[entity.typeId];
-        if (stateTreeCtor) {
-            this.stateTree = new stateTreeCtor(this.actor);
-        }
-    }
-    setStateTree(stateTree) {
-        this.stateTree?.resetStateTree();
-        delete this.stateTree;
-        this.stateTree = stateTree;
-    }
-}
-
-class State {
-    name;
-    payload;
-    constructor(name, 
-    /**
-     * state 的静态负载，将会合并到 `context` 中,
-     * 可通过 `stateTree.getContext` 访问
-     */
-    payload) {
-        this.name = name;
-        this.payload = payload;
-    }
-    /**
-     * 当 `keepCurrentState` 为 true 时，当前状态将会被持续，不会自动退出，
-     * 直到手动调用 `StateTree.finishTasks` 方法
-     */
-    keepCurrentState = false;
-    /**
-     * 每一刻都会调用 `canTransitionTo` 方法，如果返回值不为空，则尝试进入返回的状态。
-     * 若返回的状态无法进入，则尝试从父节点重新开始搜索
-     */
-    tryTransitionEveryTick = false;
-    /**
-     * 当任务执行完毕后，是否自动退出当前状态 (无需手动调用 `StateTree.finishTasks` 方法)
-     */
-    transitionOnFinished = true;
-    /**
-     * 进入状态后需要要执行的任务
-     */
-    taskNames = [];
-    parent;
-    children = [];
-    appendChild(child) {
-        child.parent = this;
-        this.children.push(child);
-        return this;
-    }
-    _removeChildByState(child) {
-        const index = this.children.indexOf(child);
-        if (index > -1) {
-            this.children.splice(index, 1);
-            child.parent = undefined;
-        }
-        return this;
-    }
-    _removeChildByName(name) {
-        const state = this.children.find(child => child.name === name);
-        if (state) {
-            return this._removeChildByState(state);
-        }
-    }
-    removeChild(child) {
-        if (typeof child === 'string') {
-            return this._removeChildByName(child);
-        }
-        else {
-            return this._removeChildByState(child);
-        }
-    }
-    OnStateTreeEvent = new EventDelegate();
-    /**
-     * 判断当前状态是否可以进入
-     * @param stateTree
-     */
-    canEnter(stateTree) { return true; }
-    /**
-     * 进入状态时调用
-     * @param stateTree
-     * @param prevState
-     */
-    onEnter(stateTree, prevState) { }
-    /**
-     * 下一个可进入的状态被搜索出来后，这个方法会被调用
-     * @override
-     * @param stateTree
-     */
-    onExit(stateTree, nextState) { }
-    /**
-     * 当 `tryTransitionEveryTick` 为 true 时，每刻都会调用。
-     * 默认直接返回根节点，若需要进入其他状态，请重写此方法。
-     *
-     * 返回 undefined 表示无法进入其他状态
-     * @param stateTree
-     * @returns
-     */
-    canTransitionTo(stateTree) { return 'root'; }
-}
-
-class RootState extends State {
-    constructor() {
-        super('root');
-    }
-    canEnter(_) {
-        return true;
-    }
-}
-class StateTree extends EventInstigator {
-    root = new RootState();
-    tasks = {};
-    _curState;
-    _taskFinished = true;
-    _shouldTransition = true;
-    component;
-    constructor(component) {
-        super();
-        this.component = component;
-        this._curState = this.root;
-        this.onStart();
-    }
-    sendStateEvent(event) {
-        this.getCurrentState().OnStateTreeEvent.call(event, this);
-    }
-    /**
-     * 返回执行上下文中调用 StateTree 方法的 Actor 实例，
-     * 可能是 Controller 或 Pawn, 请不要依赖这个方法获得 Actor 实例
-     * @returns
-     */
-    getOwner() {
-        return ReflectConfig.unsafeCtxActor();
-    }
-    getCurrentState() {
-        return this._curState;
-    }
-    getExecutingTasks() {
-        return this._curState.taskNames;
-    }
-    addTask(name, task) {
-        this.tasks[name] = task;
-    }
-    removeTask(name) {
-        delete this.tasks[name];
-    }
-    getTaskNames() {
-        return Object.keys(this.tasks);
-    }
-    async executeTasks() {
-        const state = this._curState;
-        if (!state || state.taskNames.length === 0) {
-            return true;
-        }
-        this._taskFinished = false;
-        /**
-         * 执行任务
-         */
-        try {
-            for (const task of state.taskNames) {
-                await this.tasks[task]?.(this, state);
-            }
-            this._taskFinished = true;
-            return true;
-        }
-        catch (error) {
-            return false;
-        }
-    }
-    /**
-     * 标记状态完成，立刻执行状态过渡（并不是终止当前 Task 执行）
-     *
-     * Task 将会继续执行，耗时任务请在 onExit 进行资源释放
-     */
-    finishTasks() {
-        this._taskFinished = true;
-        this._shouldTransition = true;
-    }
-    _cachedStates = {};
-    searchState(name) {
-        if (typeof name === 'object' && name) {
-            this._cachedStates[name.name] = name;
-            return name;
-        }
-        if (this._cachedStates[name]) {
-            return this._cachedStates[name];
-        }
-        let curLevel = [this.root];
-        let children = [];
-        while (children = curLevel.map(state => state.children).flat()) {
-            for (const state of curLevel) {
-                const stateName = state.name;
-                this._cachedStates[stateName] = state;
-                if (stateName === name) {
-                    return state;
-                }
-            }
-            curLevel = children;
-        }
-    }
-    async tryTransitionTo(nextState, finishTasks = true) {
-        const state = this.searchState(nextState);
-        if (!state) {
-            return false;
-        }
-        if (finishTasks) {
-            this.finishTasks();
-        }
-        return this.transitionTo(state);
-    }
-    async transitionTo(state) {
-        const prevState = this._curState;
-        const { promise, resolve } = Promise.withResolvers();
-        this._preupdates.add(() => {
-            if (!state.canEnter(this)) {
-                return resolve(false);
-            }
-            try {
-                prevState.onExit?.(this, state);
-                this._curState = state;
-                this._curState.onEnter?.(this, prevState);
-                resolve(true);
-            }
-            catch {
-                resolve(false);
-            }
-        });
-        return promise;
-    }
-    resetStateTree() {
-        this._curState = this.root;
-        this._taskFinished = true;
-        this._shouldTransition = true;
-    }
-    async tryTransition() {
-        this._shouldTransition = false;
-        if (this._curState.tryTransitionEveryTick) {
-            const nextDefinedState = this._curState.canTransitionTo?.(this);
-            if (nextDefinedState) {
-                if (await this.tryTransitionTo(nextDefinedState)) {
-                    return;
-                }
-            }
-        }
-        if (this._curState.keepCurrentState) {
-            return;
-        }
-        const found = this.searchStateCanEnter(this._curState);
-        if (!found) {
-            this.resetStateTree();
-            return;
-        }
-        if (!(await this.transitionTo(found))) {
-            this.resetStateTree();
-        }
-    }
-    findLeaf(state) {
-        if (state.children.length === 0) {
-            return state;
-        }
-        for (const child of state.children) {
-            if (child.canEnter(this)) {
-                const leaf = this.findLeaf(child);
-                if (leaf) {
-                    return leaf;
-                }
-            }
-        }
-        return null;
-    }
-    searchStateCanEnter(startState) {
-        for (const child of startState.children) {
-            if (child.canEnter(this)) {
-                const leaf = this.findLeaf(child);
-                if (leaf) {
-                    return leaf;
-                }
-            }
-        }
-        let curr = startState;
-        while (curr.parent) {
-            const parent = curr.parent;
-            for (const sibling of parent.children) {
-                if (sibling === curr) {
-                    continue;
-                }
-                if (sibling.canEnter(this)) {
-                    const leaf = this.findLeaf(sibling);
-                    if (leaf) {
-                        return leaf;
-                    }
-                }
-            }
-            curr = parent;
-        }
-        return null;
-    }
-    _preupdates = new Set();
-    async update() {
-        this._preupdates.forEach(preupdate => preupdate());
-        this._preupdates.clear();
-        if (this._taskFinished) {
-            if (await this.executeTasks() == false)
-                this._taskFinished = false;
-        }
-        if (
-        // 强制触发状态过渡
-        this._shouldTransition ||
-            // State 设置每帧尝试过渡
-            this._curState.tryTransitionEveryTick ||
-            // 正常情况下，任务执行完毕后尝试过渡
-            this._curState.transitionOnFinished && this._taskFinished && !this._curState.keepCurrentState) {
-            this.tryTransition();
-        }
-    }
-    onStart() { }
-}
-
-const { TOKENS: TOKENS$1 } = PROFIER_CONFIG;
-function getStateTree(app, entity) {
-    return app.getActor(entity.id)?.getComponent(StateTreeComponent)?.stateTree;
-}
-class StateTreePlugin {
-    name = 'StateTree';
-    description = '状态树插件 (提供状态树相关功能，用于动作类型的游戏设计)';
-    show_state_tree(pawn) {
-        const app = Application.getInst();
-        pawn.forEach(entity => {
-            profiler.info(getStateTree(app, entity));
-        });
-    }
-    state_tree_current_state(pawn) {
-        const app = Application.getInst();
-        pawn.forEach(entity => {
-            const stateTree = getStateTree(app, entity);
-            profiler.info(stateTree?.getCurrentState());
-        });
-    }
-    state_tree_current_tasks(pawn) {
-        const app = Application.getInst();
-        pawn.forEach(entity => {
-            const stateTree = getStateTree(app, entity);
-            profiler.info(stateTree?.getExecutingTasks());
-        });
-    }
-    state_tree_tasks(pawn) {
-        const app = Application.getInst();
-        pawn.forEach(entity => {
-            const stateTree = getStateTree(app, entity);
-            profiler.info(stateTree?.getTaskNames());
-        });
-    }
-    startModule(app) {
-        const conf = app.getConfig(StateTreeConfigKey, {});
-        const spawn = app.getConfig('SpawnConfig');
-        for (const k of Object.keys(conf)) {
-            spawn.registerSpecifiedActorComponent(k, StateTreeComponent);
-        }
-        profiler.registerCustomTypePrinter(StateTree, stateTree => '状态树' +
-            `\n当前状态: ${profiler.format(stateTree.getCurrentState())}` +
-            `\n当前任务: ${profiler.format(stateTree.getExecutingTasks())}`);
-        profiler.registerCustomTypePrinter(State, state => {
-            const { name, payload, keepCurrentState, children, tryTransitionEveryTick, transitionOnFinished, taskNames, } = state;
-            return `${TOKENS$1.ID + name + TOKENS$1.R}\n` + profiler.format({
-                name, payload, keepCurrentState,
-                tryTransitionEveryTick, transitionOnFinished, taskNames,
-            }) + profiler.format(children);
-        });
-    }
-}
-__decorate([
-    CustomCommand('查看 Pawn 状态树'),
-    __param(0, Param.Required('actor')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
-    __metadata("design:returntype", void 0)
-], StateTreePlugin.prototype, "show_state_tree", null);
-__decorate([
-    CustomCommand('查看状态树当前状态'),
-    __param(0, Param.Required('actor')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
-    __metadata("design:returntype", void 0)
-], StateTreePlugin.prototype, "state_tree_current_state", null);
-__decorate([
-    CustomCommand('查看状态树当前运行的任务'),
-    __param(0, Param.Required('actor')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
-    __metadata("design:returntype", void 0)
-], StateTreePlugin.prototype, "state_tree_current_tasks", null);
-__decorate([
-    CustomCommand('查看注册到状态树的所有任务'),
-    __param(0, Param.Required('actor')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
-    __metadata("design:returntype", void 0)
-], StateTreePlugin.prototype, "state_tree_tasks", null);
-
-const { ANIM: { TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG;
+const { ANIM: { PROGRESS, TRACK_STYLE, TRACK_WIDTH, STATE, NOTIFY, TRACK_COLOR }, TOKENS } = PROFIER_CONFIG;
 var AnimPlayingType;
 (function (AnimPlayingType) {
     AnimPlayingType[AnimPlayingType["Once"] = 0] = "Once";
@@ -4681,6 +4317,26 @@ class AnimSequence {
     findNotify(tick) {
         return this.animNotifEvents.find(e => e.tick === tick);
     }
+    getNotifyStates(tick) {
+        const result = [];
+        const _t = tick * 0.05;
+        for (const [name, [start, end]] of Object.entries(this.states)) {
+            if (_t >= start && _t < end) {
+                result.push(name);
+            }
+        }
+        return result;
+    }
+    getNotifies(tick) {
+        const result = [];
+        const _t = tick * 0.05;
+        for (const [name, t] of Object.entries(this.notifies)) {
+            if (_t >= t && _t < t + 0.05) {
+                result.push(name);
+            }
+        }
+        return result;
+    }
     callNotify(tick) {
         const methodName = this.findNotify(tick)?.name;
         if (methodName in this) {
@@ -4694,6 +4350,31 @@ class AnimSequence {
     onStart(layers) { }
     onEnd() { }
     onStopped(canceled) { }
+    static formatAnimSeq(animSeq) {
+        const ticks = animSeq.ticksPlayed;
+        const { animation, duration, playingType, notifies, states } = animSeq;
+        const scale = TRACK_WIDTH / duration;
+        const progress = Math.round(ticks * scale);
+        const currentNotifies = animSeq.getNotifies(ticks);
+        const currentStates = animSeq.getNotifyStates(ticks);
+        const text = `${TOKENS.STR}${animation} ${TOKENS.ID}${AnimPlayingType[playingType]} ${TOKENS.NUM}${duration}${TOKENS.R} Ticks\n` +
+            `Playing: ${TOKENS.BOOL}${animSeq.isPlaying}${TOKENS.R} Finished: ${TOKENS.BOOL}${animSeq.finished}\n` +
+            Object.entries(notifies).map(([name, t]) => {
+                const tick = t * 20;
+                const place = Math.floor(tick * scale);
+                return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${NOTIFY.COLOR}${NOTIFY.POINT_STYLE}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - 1))} ${TOKENS.R}${name}`;
+            }).join('\n') + '\n' +
+            Object.entries(states).map(([name, [start, end]]) => {
+                const startTick = start * 20;
+                const endTick = end * 20;
+                const place = Math.floor(startTick * scale);
+                const stateLength = Math.floor((endTick - startTick) * scale);
+                return `${TRACK_COLOR}${TRACK_STYLE.repeat(place)}${STATE.BAR_COLOR}${STATE.BAR_STYLE_START}${STATE.BAR_STYLE.repeat(stateLength)}${STATE.BAR_STYLE_END}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - place - stateLength - 2))} ${TOKENS.R}${name}`;
+            }).join('\n') + '\n' +
+            `${PROGRESS}${TRACK_STYLE.repeat(progress)}${TRACK_COLOR}${TRACK_STYLE.repeat(Math.max(0, TRACK_WIDTH - progress))}` +
+            `\nNotifies: ${currentNotifies.join(', ') || 'None'}\n  States: ${currentStates.join(', ') || 'None'}`;
+        return text;
+    }
     static {
         profiler.registerCustomTypePrinter(AnimSequence, animSeq => {
             const { animation, duration, playingType, notifies, states } = animSeq;
@@ -4733,7 +4414,7 @@ class AnimLayers {
     /**
      * 播放动画序列
      */
-    async playAnimSeq(animSeq, base = true) {
+    async playAnimation(animSeq, base = true) {
         const layer = base ? this.layers.base : this.layers.override;
         layer.add(animSeq);
         if (!base) {
@@ -4754,7 +4435,7 @@ class AnimLayers {
      * 播放多个动画序列
      */
     playAnimSeqList(base = true, ...animSeqList) {
-        return Promise.all(animSeqList.map(seq => this.playAnimSeq(seq, base)));
+        return Promise.all(animSeqList.map(seq => this.playAnimation(seq, base)));
     }
     /**
      * 停止指定动画序列
@@ -4836,10 +4517,10 @@ class AnimationSequenceComponent extends Component {
         }
         return animSeq;
     }
-    async playAnimSeq(animName, base = true) {
+    async playAnimation(animName, base = true) {
         const animSeq = AnimationSequenceComponent.animSeqRegistry.get(animName);
         if (animSeq) {
-            await this.animLayers.playAnimSeq(this.getOrCreateAnimSeq(animSeq), base);
+            await this.animLayers.playAnimation(this.getOrCreateAnimSeq(animSeq), base);
         }
     }
     stopAnimation(animName) {
@@ -4924,7 +4605,7 @@ var notifies$1 = {
 var states$1 = {
 	combo: [
 		0.2,
-		0.6
+		0.5
 	]
 };
 var events$1 = [
@@ -4937,7 +4618,7 @@ var events$1 = [
 		name: "stateComboStart"
 	},
 	{
-		tick: 12,
+		tick: 10,
 		name: "stateComboEnd"
 	}
 ];
@@ -4952,7 +4633,10 @@ var dataAsset$1 = {
 const tags = Tag.fromObject({
     perm: {
         input: {
-            attack: null,
+            attack: {
+                normal: null,
+                special: null,
+            },
         },
     },
     skill: {
@@ -4990,17 +4674,17 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     notifyDamage() {
     }
     onStart() {
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
     }
     stateComboStart() {
-        Tag.addTag(this.getOwner(), tags.perm.input.attack);
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
     }
     stateComboEnd() {
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
     }
     onStopped() {
         this.stateComboEnd();
-        Tag.addTag(this.getOwner(), tags.perm.input.attack);
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
     }
 };
 MariePSequence = __decorate([
@@ -5040,11 +4724,11 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     }
     onStart() {
         this.getOwner().addTags('skill.slot.attack');
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack);
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
     }
     onStopped() {
         this.getOwner().removeTags('skill.slot.attack');
-        Tag.addTag(this.getOwner(), tags.perm.input.attack);
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
     }
 };
 MariePpSequence = __decorate([
@@ -5053,6 +4737,35 @@ MariePpSequence = __decorate([
 
 function getAnimSeqComp(en) {
     return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent);
+}
+class AnimationSequenceDisplayComponent extends Component {
+    actionBar;
+    animComp;
+    animMessage;
+    allowTicking = true;
+    constructor(actionBar, animComp) {
+        super();
+        this.actionBar = actionBar;
+        this.animComp = animComp;
+    }
+    start() {
+        const actionBar = this.actor.getComponent(ActionBarComponent);
+        const animComp = this.actor.getComponent(AnimationSequenceComponent);
+        if (!actionBar || !animComp) {
+            this.remove();
+            return;
+        }
+        this.animMessage = actionBar.message.createBlock('ActionBar.AnimSeq', '');
+    }
+    detach() {
+        this.actionBar.message.removeContentById('ActionBar.AnimSeq');
+    }
+    update() {
+        if (this.animMessage) {
+            const anim = this.animComp.animLayers.getPlayingAnimation();
+            this.animMessage.text = '\nAnim: ' + (anim ? AnimSequence.formatAnimSeq(anim) : 'None');
+        }
+    }
 }
 class AnimationSequencePlugin {
     name = 'animSeq';
@@ -5091,10 +4804,26 @@ class AnimationSequencePlugin {
             }
         });
     }
+    hud_anim_seq(actors, enable = true, origin, app) {
+        const actor = actors[0];
+        const instigator = app.getActor(origin.sourceEntity.id);
+        if (!instigator) {
+            return profiler.error(`操作者没有绑定 Actor`);
+        }
+        if (!enable) {
+            return instigator.removeComponent(AnimationSequenceDisplayComponent);
+        }
+        const actionBar = instigator.getComponent(ActionBarComponent);
+        const animComp = actor.getComponent(AnimationSequenceComponent);
+        if (!actionBar || !animComp) {
+            return profiler.error(`操作者没有绑定 ActionBar 或被检测对象没有 AnimationSequenceComponent 组件`);
+        }
+        instigator.addComponent(new AnimationSequenceDisplayComponent(actionBar, animComp));
+    }
 }
 __decorate([
     CustomCommand('查看动画层'),
-    __param(0, Param.Required('actor')),
+    __param(0, Param.Required('entity')),
     __param(1, Param.Optional('int')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array, Object]),
@@ -5102,7 +4831,7 @@ __decorate([
 ], AnimationSequencePlugin.prototype, "anim_seq_layer", null);
 __decorate([
     CustomCommand('查看当前动画'),
-    __param(0, Param.Required('actor')),
+    __param(0, Param.Required('entity')),
     __param(1, Param.Optional('int')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array, Object]),
@@ -5110,88 +4839,32 @@ __decorate([
 ], AnimationSequencePlugin.prototype, "anim_seq_playing", null);
 __decorate([
     CustomCommand('查看动画名称'),
-    __param(0, Param.Required('actor')),
+    __param(0, Param.Required('entity')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
 ], AnimationSequencePlugin.prototype, "anim_seq_defined", null);
-
-class MyController extends RoninPlayerController {
-    setupInput() {
-        super.setupInput();
-        const player = this.getPawn();
-        const animComp = player.getComponent(AnimationSequenceComponent);
-        const stateTreeComp = player.getComponent(StateTreeComponent);
-        Tag.addTag(player, tags.perm.input.attack);
-        this.OnAttack.on(async (press) => {
-            if (!press) {
-                return;
-            }
-            if (Tag.hasTag(player, tags.perm.input.attack, true)) {
-                stateTreeComp.stateTree.sendStateEvent({
-                    tag: tags.skill.slot.attack,
-                    targetActor: player,
-                });
-            }
-        });
-        this.OnInteract.on(async (press) => {
-            if (!press) {
-                return;
-            }
-            profiler.info('start kick');
-            animComp.playAnimSeq(MarieKSequence.animation);
-            profiler.info(animComp.getPlayingAnimation());
-        });
+__decorate([
+    CustomCommand('添加 Animation Sequence 监控视图到 Action Bar'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Required('bool')),
+    __param(2, Param.Origin),
+    __param(3, Param.App),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object, Object, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "hud_anim_seq", null);
+var anim;
+(function (anim) {
+    function playSequence(actor, name, base = true) {
+        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.playAnimation(name, base);
     }
-}
-
-class MariePState extends State {
-    static taskName = 'p';
-    static async task(tree) {
-        const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent);
-        await animSeq?.playAnimSeq(MariePSequence.animation);
+    anim.playSequence = playSequence;
+    function stopSequence(actor, name) {
+        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.stopAnimation(name);
     }
-    taskNames = [MariePState.taskName];
-    canEnter(stateTree) {
-        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true);
-    }
-    onEnter(stateTree, prevState) {
-        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack);
-        this.OnStateTreeEvent.bind(async (ev) => {
-            if (ev.tag === tags.skill.slot.attack) {
-                Tag.addTag(ev.targetActor, tags.skill.slot.attack);
-                await stateTree.tryTransitionTo('pp');
-            }
-        });
-    }
-}
-class MariePpState extends State {
-    static taskName = 'pp';
-    static async task(tree) {
-        const animSeq = tree.getOwner().getComponent(AnimationSequenceComponent);
-        await animSeq?.playAnimSeq(MariePpSequence.animation);
-    }
-    taskNames = [MariePpState.taskName];
-    canEnter(stateTree) {
-        return Tag.hasTag(stateTree.getOwner(), tags.skill.slot.attack, true);
-    }
-    onEnter(stateTree, prevState) {
-        Tag.removeTag(stateTree.getOwner(), tags.skill.slot.attack);
-    }
-}
-class MarieTricksStateTree extends StateTree {
-    onStart() {
-        this.addTask(MariePState.taskName, MariePState.task);
-        this.addTask(MariePpState.taskName, MariePpState.task);
-        this.root.appendChild(new MariePState('p'));
-        this.root.appendChild(new MariePpState('pp'));
-        this.root.OnStateTreeEvent.bind(ev => {
-            if (ev.tag === tags.skill.slot.attack) {
-                Tag.addTag(ev.targetActor, tags.skill.slot.attack);
-            }
-        });
-    }
-}
+    anim.stopSequence = stopSequence;
+})(anim || (anim = {}));
 
 var TransitionTriggerType;
 (function (TransitionTriggerType) {
@@ -5203,12 +4876,76 @@ var TransitionTriggerType;
     TransitionTriggerType[TransitionTriggerType["Custom"] = 5] = "Custom";
 })(TransitionTriggerType || (TransitionTriggerType = {}));
 
+const stateMachineDefs = new Map();
 const stateMachineMapping = new Map();
+function getOrCreate(cls) {
+    let def = stateMachineDefs.get(cls);
+    if (def) {
+        return def;
+    }
+    def = { states: {} };
+    stateMachineDefs.set(cls, def);
+    return def;
+}
 function getStateMachineDef(id) {
     return stateMachineMapping.get(id);
 }
+/**
+ * 定义状态机模板
+ * @param stateMachineId
+ * @param rootState
+ * @param inherits
+ * @returns
+ */
+function StateMachineTemplate(stateMachineId, rootState, inherits = []) {
+    return (target) => {
+        const def = getOrCreate(target);
+        def.id = stateMachineId;
+        def.rootState = rootState;
+        def.inherits = inherits;
+        stateMachineMapping.set(stateMachineId, def);
+    };
+}
+let contextStateMachineDef = null;
+let contextStateName = null;
+let _canCallHooks = false;
+/**
+ * 在 `StateMachineTemplate` 内定义状态
+ * @param duration Ticks 游戏刻数
+ * @returns
+ */
+function StateDef(duration = Infinity) {
+    return (t, p) => {
+        const stateMachine = getOrCreate(t.constructor);
+        contextStateMachineDef = stateMachine;
+        contextStateName = p;
+        const stateDef = {
+            name: p,
+            duration,
+        };
+        contextStateMachineDef.states[p] = stateDef;
+        const setupHandler = t[p];
+        _canCallHooks = true;
+        try {
+            const transitions = setupHandler.call(undefined);
+            stateDef.transitions = transitions;
+        }
+        finally {
+            _canCallHooks = false;
+        }
+    };
+}
+function onEnter(fn) {
+    if (!_canCallHooks) {
+        throw new Error("onEnter can only be called inside StateDef");
+    }
+    if (!contextStateMachineDef || !contextStateName) {
+        return;
+    }
+    contextStateMachineDef.states[contextStateName].enter = fn;
+}
 
-const defaultOnError = (error) => { profiler.info(error); };
+const defaultOnError = (error) => { profiler.error(error); };
 class StateMachine {
     owner;
     onerror;
@@ -5372,9 +5109,28 @@ class StateMachine {
         // Exit current state, 然后安装新的定义并进入 root state
         this.callExit();
         this._stateMachineDef = newDef;
-        // build buckets for fast lookup
+        // 构建并排序 buckets（通过方法实现，便于后续重建）
+        this.rebuildBuckets();
+        this._curState = newDef.rootState ?? 'unknown';
+        this.currentStateTicks = 0;
+        this.callEnter();
+    }
+    getStateNames() {
+        return Object.keys(this._stateMachineDef?.states ?? {});
+    }
+    currentStateTicks = 0;
+    get stateTicks() {
+        return this.currentStateTicks;
+    }
+    /**
+     * 重建所有 state 的 transition buckets（按 trigger 分桶并按 priority 排序）
+     */
+    rebuildBuckets() {
         this._stateBuckets.clear();
-        for (const [name, s] of Object.entries(newDef.states)) {
+        const def = this._stateMachineDef;
+        if (!def)
+            return;
+        for (const [name, s] of Object.entries(def.states)) {
             const buckets = {};
             for (const tr of s.transitions ?? []) {
                 const key = tr.trigger;
@@ -5385,13 +5141,33 @@ class StateMachine {
                 }
                 arr.push(tr);
             }
+            // 不对 bucket 做优先级排序（优先级特性未启用）
             this._stateBuckets.set(name, buckets);
         }
-        this._curState = newDef.rootState ?? 'unknown';
-        this.currentStateTicks = 0;
-        this.callEnter();
     }
-    currentStateTicks = 0;
+    /**
+     * 重建单个 state 的 buckets（如果需要在运行时局部刷新）
+     */
+    rebuildBucketsFor(stateName) {
+        const def = this._stateMachineDef;
+        if (!def)
+            return;
+        const s = def.states[stateName];
+        if (!s)
+            return;
+        const buckets = {};
+        for (const tr of s.transitions ?? []) {
+            const key = tr.trigger;
+            let arr = buckets[key];
+            if (!arr) {
+                arr = [];
+                buckets[key] = arr;
+            }
+            arr.push(tr);
+        }
+        // 不对 bucket 做优先级排序（优先级特性未启用）
+        this._stateBuckets.set(stateName, buckets);
+    }
     resetStateMachine() {
         // 注意：reset 不再调用 callExit()，以避免在 exit 抛错时出现递归调用
         this._curState = 'unknown';
@@ -5414,7 +5190,8 @@ class StateMachine {
         }
         catch (error) {
             try {
-                this.onerror(error);
+                // 在错误中包含当前 state 名称以便定位
+                this.onerror({ error, state: this._curState, phase: 'exit' });
             }
             catch (error) {
                 defaultOnError(error);
@@ -5428,7 +5205,8 @@ class StateMachine {
         }
         catch (error) {
             try {
-                this.onerror(error);
+                // 在错误中包含当前 state 名称以便定位
+                this.onerror({ error, state: this._curState, phase: 'enter' });
             }
             catch (error) {
                 defaultOnError(error);
@@ -5444,8 +5222,7 @@ class StateMachine {
                 return;
             }
             curState?.update?.(this.owner);
-            // 仅当 duration 为有效数字且大于 0 时才触发 OnEndOfState
-            if (typeof curState.duration === 'number' && curState.duration > 0 && this.currentStateTicks >= curState.duration) {
+            if (this.currentStateTicks >= (curState.duration ?? Infinity)) {
                 this.triggerCustom(true);
             }
         }
@@ -5466,6 +5243,11 @@ class StateMachine {
      * @param state
      */
     changeState(state) {
+        // 保护：确保目标 state 存在，避免切换到不存在的状态
+        if (!this.getState(state)) {
+            profiler.info(`Attempt to change to unknown state '${state}'`);
+            return;
+        }
         // 如果已经在切换中，则把请求加入队列，等待当前切换完成后再处理
         if (this._changing) {
             this._pendingStateQueue.push(state);
@@ -5529,14 +5311,39 @@ class StateMachine {
      * @returns
      */
     canTransition(cond) {
-        if (!cond.canTransition || cond.canTransition(this.owner)) {
-            const state = this.getState(cond.nextState);
-            if (!state) {
+        try {
+            if (cond.canTransition && !cond.canTransition(this.owner)) {
                 return false;
             }
-            return !state.canEnter || state.canEnter(this.owner);
         }
-        return false;
+        catch (err) {
+            try {
+                this.onerror({ error: err, cond, phase: 'canTransition' });
+            }
+            catch (e) {
+                defaultOnError(e);
+            }
+            return false;
+        }
+        const state = this.getState(cond.nextState);
+        if (!state) {
+            return false;
+        }
+        try {
+            if (state.canEnter && !state.canEnter(this.owner)) {
+                return false;
+            }
+        }
+        catch (err) {
+            try {
+                this.onerror({ error: err, state: cond.nextState, phase: 'canEnter' });
+            }
+            catch (e) {
+                defaultOnError(e);
+            }
+            return false;
+        }
+        return true;
     }
     /**
      * `Custom` 和 `OnEnd` 的触发函数
@@ -5573,7 +5380,7 @@ class StateMachine {
         const eventConds = (buckets[TransitionTriggerType.OnEvent] ?? []);
         for (const eventCond of eventConds) {
             const { event: _ev, nextState, filter } = eventCond;
-            if (_ev === type && (!filter || filter(this.owner, event)) && this.canTransition(eventCond)) {
+            if (_ev === type && (!filter || !event || filter(this.owner, event)) && this.canTransition(eventCond)) {
                 return this.changeState(nextState);
             }
         }
@@ -5597,10 +5404,15 @@ class StateMachine {
             if (attribute !== _attr) {
                 continue;
             }
-            if (typeof _valueMatcher === 'function' && _valueMatcher(value, old)) {
-                return this.changeState(nextState);
+            if (typeof _valueMatcher === 'function') {
+                // 类型断言，因为当 T 是函数类型时，ValueMatcher<T> 可能是 T 本身，也可能是匹配函数
+                // 我们假设如果是函数，则它符合 (value: T, old: T) => boolean 签名
+                const matcherFn = _valueMatcher;
+                if (matcherFn(value, old)) {
+                    return this.changeState(nextState);
+                }
             }
-            if (value === _valueMatcher) {
+            else if (value === _valueMatcher) {
                 return this.changeState(nextState);
             }
         }
@@ -5713,6 +5525,7 @@ class AttributesComponent extends EventComponent {
     }
 }
 
+const { TOKENS: T } = PROFIER_CONFIG;
 const entityStateMachineMap = new Map();
 class FinateStateMachineComponent extends Component {
     stateMachine = null;
@@ -5721,16 +5534,7 @@ class FinateStateMachineComponent extends Component {
         const stateMachine = new StateMachine(this.actor);
         this.stateMachine = stateMachine;
         const owner = this.actor;
-        if (Pawn.isPawn(owner)) {
-            const stateMachineId = entityStateMachineMap.get(owner.entity?.typeId);
-            if (!stateMachineId) {
-                return;
-            }
-            const fsmDef = getStateMachineDef(stateMachineId);
-            if (fsmDef) {
-                stateMachine.setStateMachineDef(fsmDef);
-            }
-        }
+        this.bindFSMDef(stateMachine);
         owner.OnTagChange.addListener((type, tag) => {
             if (type === TagEventType.Add) {
                 stateMachine.triggerTagAdd(tag);
@@ -5744,6 +5548,25 @@ class FinateStateMachineComponent extends Component {
             attributesComp.addListener('onCalculated', (name, v, old) => stateMachine.triggerAttrChange(name, v, old));
         }
     }
+    /**
+     * 从配置中获取状态机定义并绑定，不适用于玩家
+     *
+     * @param stateMachine
+     * @returns
+     */
+    bindFSMDef(stateMachine) {
+        const owner = this.actor;
+        if (Pawn.isPawn(owner)) {
+            const stateMachineId = entityStateMachineMap.get(owner.entity?.typeId);
+            if (!stateMachineId) {
+                return;
+            }
+            const fsmDef = getStateMachineDef(stateMachineId);
+            if (fsmDef) {
+                stateMachine.setStateMachineDef(fsmDef);
+            }
+        }
+    }
     update() {
         this.stateMachine?.update();
     }
@@ -5753,20 +5576,297 @@ class FinateStateMachineComponent extends Component {
         this.stateMachine = null;
     }
 }
+const TriggerNamesMapping = [
+    'OnEndOfState',
+    'OnEvent',
+    'OnAttributeChange',
+    'OnTagAdd',
+    'OnTagRemove',
+    'Custom',
+];
+function getStateTransStr(fsm, name) {
+    const curState = fsm.getState(name);
+    if (!curState) {
+        return `  None`;
+    }
+    return curState.transitions.map(trans => {
+        const triggerStr = TriggerNamesMapping[trans.trigger];
+        return `  ${triggerStr} -> ${trans.nextState}`;
+    }).join('\n');
+}
+class FinateStateMachineDisplayComponent extends Component {
+    actionBar;
+    fsm;
+    fsmMessage;
+    allowTicking = true;
+    constructor(actionBar, fsm) {
+        super();
+        this.actionBar = actionBar;
+        this.fsm = fsm;
+    }
+    start() {
+        this.fsmMessage = this.actionBar.message.createBlock('ActionBar.FSM', '');
+    }
+    update() {
+        if (!this.fsmMessage) {
+            return;
+        }
+        const curState = this.fsm?.currentState();
+        if (curState) {
+            this.fsmMessage.text = `\nState: ${curState.name}  ${T.NUM}${this.fsm?.stateTicks}${T.R} / ${T.ID}${String(curState.duration ?? Infinity)}${T.R}`;
+        }
+        else {
+            this.fsmMessage.text = '\nState: None';
+        }
+    }
+    detach() {
+        if (this.fsmMessage) {
+            this.actionBar?.message.removeContent(this.fsmMessage);
+        }
+    }
+}
 class FinateStateMachinePlugin {
     name = 'fsm';
     description = '有限状态机插件';
     startModule(app) {
         registerPlayerComponent(FinateStateMachineComponent);
+        this.registerFSMTypePrinter();
+    }
+    registerFSMTypePrinter() {
+        profiler.registerCustomTypePrinter(FinateStateMachineComponent, inst => {
+            const fsm = inst.stateMachine;
+            if (!fsm) {
+                return `FSM<None>`;
+            }
+            const header = `FSM<${T.CLASS}${fsm.constructor.name}${T.R}>`;
+            const stateNames = `  States: ${fsm.getStateNames().join(', ') || 'Empty'}\n`;
+            const curState = fsm.currentState();
+            if (!curState) {
+                return [
+                    header,
+                    stateNames,
+                    `  Current State: ${T.CLASS}None`
+                ].join('\n');
+            }
+            const curStateClass = `  Current State: ${T.CLASS}${curState.constructor.name}${T.R}`;
+            const curStateDesc = `  Name: ${T.STR}${curState.name}${T.R}  Duration: ${T.NUM}${(curState.duration ?? Infinity).toFixed(2)}${T.R}`;
+            return [
+                header,
+                stateNames,
+                curStateClass,
+                curStateDesc,
+            ].join('\n');
+        });
+    }
+    show_fsm(actors) {
+        for (const actor of actors) {
+            const fsmComp = actor.getComponent(FinateStateMachineComponent);
+            if (fsmComp) {
+                profiler.info(fsmComp);
+            }
+        }
+    }
+    show_fsm_transitions(actors, stateName) {
+        for (const actor of actors) {
+            const fsmComp = actor.getComponent(FinateStateMachineComponent);
+            if (!fsmComp || !fsmComp.stateMachine) {
+                continue;
+            }
+            profiler.info(`State ${stateName} transitions: \n${getStateTransStr(fsmComp.stateMachine, stateName)}`);
+        }
+    }
+    hud_fsm(actors, enabled, origin) {
+        const actor = actors[0];
+        const instigator = Application.getInst().getActor(origin.sourceEntity?.id);
+        if (!instigator) {
+            return profiler.error(`操作者没有绑定 Pawn`);
+        }
+        if (!enabled) {
+            instigator.removeComponent(FinateStateMachineDisplayComponent);
+        }
+        const fsmComp = actor.getComponent(FinateStateMachineComponent);
+        const hud = instigator.getComponent(ActionBarComponent);
+        if (!fsmComp || !fsmComp.stateMachine || !hud) {
+            return profiler.error(`Actor 缺少 FinateStateMachineComponent 或 ActionBarComponent 组件`);
+        }
+        instigator.addComponent(new FinateStateMachineDisplayComponent(hud, fsmComp.stateMachine));
+    }
+    fsm_apply(actors, id) {
+        for (const actor of actors) {
+            const fsmComp = actor.getComponent(FinateStateMachineComponent);
+            if (!fsmComp) {
+                return profiler.error(`Actor 缺少 FinateStateMachineComponent 组件`);
+            }
+            const fsmDef = getStateMachineDef(id);
+            if (!fsmDef) {
+                return profiler.error(`没有找到 ID 为 ${id} 的状态机预设`);
+            }
+            fsmComp.stateMachine?.setStateMachineDef(fsmDef);
+            profiler.info(`已将状态机预设 ${id} 应用到目标`);
+        }
+    }
+}
+__decorate([
+    CustomCommand('查看 Actor 状态机'),
+    __param(0, Param.Required('actor')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], FinateStateMachinePlugin.prototype, "show_fsm", null);
+__decorate([
+    CustomCommand('查看当前状态过渡'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Required('string')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, String]),
+    __metadata("design:returntype", void 0)
+], FinateStateMachinePlugin.prototype, "show_fsm_transitions", null);
+__decorate([
+    CustomCommand('将第一个目标的状态机信息在 Actionbar 上显示/隐藏'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Required('bool')),
+    __param(2, Param.Origin),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Boolean, Object]),
+    __metadata("design:returntype", void 0)
+], FinateStateMachinePlugin.prototype, "hud_fsm", null);
+__decorate([
+    CustomCommand('通过 ID 将状态机预设应用到目标'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Required('string')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, String]),
+    __metadata("design:returntype", void 0)
+], FinateStateMachinePlugin.prototype, "fsm_apply", null);
+
+class MyController extends RoninPlayerController {
+    setupInput() {
+        super.setupInput();
+        const player = this.getPawn();
+        const stateMachineComp = player.getComponent(FinateStateMachineComponent);
+        // 初始允许玩家进行攻击输入
+        Tag.addTag(player, tags.perm.input.attack.normal);
+        Tag.addTag(player, tags.perm.input.attack.special);
+        // 用来判断玩家是否可以进行攻击输入
+        // 这里并没有使用 normal / special, 是因为 Tag 的模糊匹配可以匹配父级标签
+        const attackPermTag = Tag.of('perm.input.attack');
+        this.OnAttack.on(async (press) => {
+            if (!press) {
+                return;
+            }
+            // 玩家被允许进行普通攻击输入时，添加普通攻击标签
+            if (Tag.hasTag(player, attackPermTag) && stateMachineComp?.stateMachine) {
+                Tag.addTag(player, tags.skill.slot.attack);
+            }
+        });
+        this.OnInteract.on(async (press) => {
+            if (!press) {
+                return;
+            }
+            // 玩家被允许进行特殊攻击输入时，添加特殊攻击标签
+            if (Tag.hasTag(player, attackPermTag) && stateMachineComp?.stateMachine) {
+                Tag.addTag(player, tags.skill.slot.special);
+            }
+        });
     }
 }
 
+let MarieMoves = class MarieMoves {
+    resume() {
+        return [
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    idle() {
+        return [
+            {
+                // 玩家添加标签时触发状态转换
+                trigger: TransitionTriggerType.OnTagAdd,
+                // 转换到 attack1
+                nextState: 'attack1',
+                // 标签为 tags.skill.slot.attack
+                tag: tags.skill.slot.attack
+            },
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'kick1',
+                tag: tags.skill.slot.special
+            },
+        ];
+    }
+    attack1() {
+        onEnter(actor => anim.playSequence(actor, MariePSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'attack2',
+                tag: tags.skill.slot.attack
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    attack2() {
+        onEnter(actor => anim.playSequence(actor, MariePpSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    kick1() {
+        onEnter(actor => anim.playSequence(actor, MarieKSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+};
+__decorate([
+    StateDef(0),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "resume", null);
+__decorate([
+    StateDef(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "idle", null);
+__decorate([
+    StateDef(12),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "attack1", null);
+__decorate([
+    StateDef(15),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "attack2", null);
+__decorate([
+    StateDef(14),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "kick1", null);
+MarieMoves = __decorate([
+    StateMachineTemplate('ronin:marie', 'resume')
+], MarieMoves);
+
 let MyMod = class MyMod extends ModBase {
     start(app) {
-        app.setConfig(StateTreeConfigKey, {
-            'minecraft:player': MarieTricksStateTree
-        });
-        app.loadPlugin(RoninPlugin, StateTreePlugin, AnimationSequencePlugin, FinateStateMachinePlugin);
+        app.loadPlugin(RoninPlugin, AnimationSequencePlugin, FinateStateMachinePlugin);
         registerPlayerController(MyController);
     }
 };
