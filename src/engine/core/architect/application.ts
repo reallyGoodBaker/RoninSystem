@@ -305,24 +305,28 @@ export class ApplicationCommands {
     @CustomCommand('查看 Actor')
     show_actor(
         @Param.Required('entity', 'actors') entities: Entity[],
+        @Param.App app: IApplication
     ) {
         entities.map(entity => {
-            const actor = Application.getInst().getActor(entity.id)
+            const actor = app.getActor(entity.id)
             profiler.info(actor)
         })
     }
 
     @CustomCommand('查看所有 Actors')
-    show_actors() {
-        profiler.info([ ...Application.getInst().actors.keys() ])
+    show_actors(
+        @Param.App app: Application
+    ) {
+        profiler.info([ ...app.actors.keys() ])
     }
 
     @CustomCommand('查看 Player Controller / AI Controller')
     show_controller(
-        @Param.Required('entity', 'actors') entities: Entity[]
+        @Param.Required('entity', 'actors') entities: Entity[],
+        @Param.App app: Application,
     ) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id) as Pawn
+            const actor = app.getActor(entity.id) as Pawn
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`)
             }
@@ -333,10 +337,11 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Actor Components')
     show_components(
-        @Param.Required('entity', 'pawn') entities: Entity[]
+        @Param.Required('entity', 'pawn') entities: Entity[],
+        @Param.App app: Application,
     ) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id) as Pawn
+            const actor = app.getActor(entity.id) as Pawn
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`)
             }
@@ -347,10 +352,11 @@ export class ApplicationCommands {
 
     @CustomCommand('查看 Controller Components')
     show_controller_components(
-        @Param.Required('entity', 'pawn') entities: Entity[]
+        @Param.Required('entity', 'pawn') entities: Entity[],
+        @Param.App app: Application,
     ) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id) as Pawn
+            const actor = app.getActor(entity.id) as Pawn
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`)
             }
@@ -365,8 +371,10 @@ export class ApplicationCommands {
     }
 
     @CustomCommand('查看 Application Plugins')
-    show_plugins() {
-        const messages = Array.from(Application.getInst().plugins.values())
+    show_plugins(
+        @Param.App app: Application,
+    ) {
+        const messages = Array.from(app.plugins.values())
             .map(({ name, description }) => `\n${TOKENS.ID}${name}§r: ${TOKENS.STR}${description}`)
 
         profiler.info(

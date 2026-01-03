@@ -24,9 +24,9 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看 Pawn 状态树')
     show_state_tree(
-        @Param.Required('entity') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[],
+        @Param.App app: Application,
     ) {
-        const app = Application.getInst()
         pawn.forEach(entity => {
             profiler.info(getStateTree(app, entity))
         })
@@ -34,9 +34,9 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看状态树当前状态')
     state_tree_current_state(
-        @Param.Required('entity') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[],
+        @Param.App app: Application,
     ) {
-        const app = Application.getInst()
         pawn.forEach(entity => {
             const stateTree = getStateTree(app, entity)
             profiler.info(
@@ -47,9 +47,9 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看状态树当前运行的任务')
     state_tree_current_tasks(
-        @Param.Required('entity') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[],
+        @Param.App app: Application,
     ) {
-        const app = Application.getInst()
         pawn.forEach(entity => {
             const stateTree = getStateTree(app, entity)
             profiler.info(
@@ -60,9 +60,9 @@ export class StateTreePlugin implements IPlugin {
 
     @CustomCommand('查看注册到状态树的所有任务')
     state_tree_tasks(
-        @Param.Required('entity') pawn: Entity[]
+        @Param.Required('entity') pawn: Entity[],
+        @Param.App app: Application,
     ) {
-        const app = Application.getInst()
         pawn.forEach(entity => {
             const stateTree = getStateTree(app, entity)
             profiler.info(

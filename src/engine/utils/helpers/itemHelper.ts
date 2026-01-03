@@ -151,10 +151,10 @@ export class ItemHelper {
         @Param.OptionalEnum('inventory', 'none', 'slot') itemLockMode: string = 'none',
         @Param.Optional('bool', 'keep_on_death') keepOnDeath: boolean = false,
         @Param.Optional('string', 'json_config') jsonConf: string = '{}',
+        @Param.App application: Application,
     ) {
         players.forEach(player => {
             const { lore, nameTag, canDestroy, canPlaceOn } = JSON.parse(jsonConf)
-            const application = Application.getInst()
             const actor = application.getActor(player.id)
             if (!actor) {
                 return

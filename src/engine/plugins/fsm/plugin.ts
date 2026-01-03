@@ -209,9 +209,10 @@ export class FinateStateMachinePlugin implements IPlugin {
         @Param.Required('actor') actors: Actor[],
         @Param.Required('bool') enabled: boolean,
         @Param.Origin origin: Param.Origin,
+        @Param.App app: Application,
     ) {
         const actor = actors[0]
-        const instigator = Application.getInst().getActor(origin.sourceEntity?.id as string)
+        const instigator = app.getActor(origin.sourceEntity?.id as string)
         if (!instigator) {
             return profiler.error(`操作者没有绑定 Pawn`)
         }

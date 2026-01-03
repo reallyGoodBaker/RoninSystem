@@ -3760,36 +3760,36 @@ class Application extends EventInstigator {
  * 不要实例化这个类，这里 export 是为了防止 tree-shaking
  */
 class ApplicationCommands {
-    show_actor(entities) {
+    show_actor(entities, app) {
         entities.map(entity => {
-            const actor = Application.getInst().getActor(entity.id);
+            const actor = app.getActor(entity.id);
             profiler.info(actor);
         });
     }
-    show_actors() {
-        profiler.info([...Application.getInst().actors.keys()]);
+    show_actors(app) {
+        profiler.info([...app.actors.keys()]);
     }
-    show_controller(entities) {
+    show_controller(entities, app) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id);
+            const actor = app.getActor(entity.id);
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`);
             }
             profiler.info(actor.getController());
         });
     }
-    show_components(entities) {
+    show_components(entities, app) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id);
+            const actor = app.getActor(entity.id);
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`);
             }
             profiler.info(actor.getComponents());
         });
     }
-    show_controller_components(entities) {
+    show_controller_components(entities, app) {
         entities.forEach(entity => {
-            const actor = Application.getInst().getActor(entity.id);
+            const actor = app.getActor(entity.id);
             if (!actor) {
                 return profiler.error(`Actor ${entity.id} not found`);
             }
@@ -3800,8 +3800,8 @@ class ApplicationCommands {
             profiler.info(controller.getComponents());
         });
     }
-    show_plugins() {
-        const messages = Array.from(Application.getInst().plugins.values())
+    show_plugins(app) {
+        const messages = Array.from(app.plugins.values())
             .map(({ name, description }) => `\n${TOKENS$1.ID}${name}§r: ${TOKENS$1.STR}${description}`);
         profiler.info(`已加载${messages.length}个插件:`, ...messages);
     }
@@ -3809,41 +3809,47 @@ class ApplicationCommands {
 __decorate([
     CustomCommand('查看 Actor'),
     __param(0, Param.Required('entity', 'actors')),
+    __param(1, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Array, Object]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_actor", null);
 __decorate([
     CustomCommand('查看所有 Actors'),
+    __param(0, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Application]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_actors", null);
 __decorate([
     CustomCommand('查看 Player Controller / AI Controller'),
     __param(0, Param.Required('entity', 'actors')),
+    __param(1, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Array, Application]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_controller", null);
 __decorate([
     CustomCommand('查看 Actor Components'),
     __param(0, Param.Required('entity', 'pawn')),
+    __param(1, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Array, Application]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_components", null);
 __decorate([
     CustomCommand('查看 Controller Components'),
     __param(0, Param.Required('entity', 'pawn')),
+    __param(1, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
+    __metadata("design:paramtypes", [Array, Application]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_controller_components", null);
 __decorate([
     CustomCommand('查看 Application Plugins'),
+    __param(0, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Application]),
     __metadata("design:returntype", void 0)
 ], ApplicationCommands.prototype, "show_plugins", null);
 function Entry(fn) {
@@ -5675,9 +5681,9 @@ class FinateStateMachinePlugin {
             profiler.info(`State ${stateName} transitions: \n${getStateTransStr(fsmComp.stateMachine, stateName)}`);
         }
     }
-    hud_fsm(actors, enabled, origin) {
+    hud_fsm(actors, enabled, origin, app) {
         const actor = actors[0];
-        const instigator = Application.getInst().getActor(origin.sourceEntity?.id);
+        const instigator = app.getActor(origin.sourceEntity?.id);
         if (!instigator) {
             return profiler.error(`操作者没有绑定 Pawn`);
         }
@@ -5726,8 +5732,9 @@ __decorate([
     __param(0, Param.Required('actor')),
     __param(1, Param.Required('bool')),
     __param(2, Param.Origin),
+    __param(3, Param.App),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, Boolean, Object]),
+    __metadata("design:paramtypes", [Array, Boolean, Object, Application]),
     __metadata("design:returntype", void 0)
 ], FinateStateMachinePlugin.prototype, "hud_fsm", null);
 __decorate([
