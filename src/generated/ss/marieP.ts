@@ -22,15 +22,15 @@ export class MariePSequence extends AnimSequence {
 
     }
 
-    onStart(): void {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
-    }
-    
     protected stateComboStart() {
         Tag.addTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
     
     protected stateComboEnd() {
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
+    }
+
+    onStart(): void {
         Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
     }
 

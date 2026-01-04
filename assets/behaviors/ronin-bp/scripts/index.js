@@ -4222,6 +4222,8 @@ class DeterminationHudComponent extends Component {
 /**
  * 若要拓展此类，请继承 RoninModPlayer
  * 并复写 setupInput() 方法，但一定要调用 super.setupInput()
+ *
+ * 如果只是需要监听输入事件，请直接获取 RoninPlayerController
  */
 class RoninPlayerController extends PlayerController {
     inputComponent = new InputComponent();
@@ -4238,16 +4240,6 @@ class RoninPlayerController extends PlayerController {
         this.inputComponent.addListener('Sprint', this.OnSprint.trigger);
         this.inputComponent.addListener('Sneak', this.OnSneak.trigger);
         this.inputComponent.addListener('Jump', this.OnJump.trigger);
-    }
-}
-
-class RoninPlugin {
-    name = 'RoninBase';
-    description = '浪人系统的基础插件 (默认情况只提供最小功能)';
-    startModule() {
-        registerPlayerSpawnClass(RoninModPlayer);
-        registerPlayerController(RoninPlayerController);
-        registerPlayerComponent(ActionBarComponent, DeterminationHudComponent, ControlKitComponent);
     }
 }
 
@@ -4511,6 +4503,9 @@ class AnimationSequenceComponent extends Component {
     animLayers = new AnimLayers(this);
     animSeqs = new Map();
     static animSeqRegistry = new Map();
+    static hasAnimation(animName) {
+        return AnimationSequenceComponent.animSeqRegistry.has(animName);
+    }
     update() {
         this.animLayers.update();
     }
@@ -4553,18 +4548,27 @@ function AnimationSequence(cls) {
     AnimationSequenceComponent.animSeqRegistry.set(cls.animation, cls);
 }
 
-var notifies$2 = {
-	damage: 0.38
+var notifies$5 = {
+	input_buffer: 0.4,
+	damage: 0.3
 };
-var states$2 = {
+var states$5 = {
 	blocking: [
 		0.1,
 		0.2
+	],
+	combo: [
+		0.35,
+		0.45
 	]
 };
-var events$2 = [
+var events$5 = [
 	{
 		tick: 8,
+		name: "notifyInput_buffer"
+	},
+	{
+		tick: 6,
 		name: "notifyDamage"
 	},
 	{
@@ -4574,67 +4578,23 @@ var events$2 = [
 	{
 		tick: 4,
 		name: "stateBlockingEnd"
-	}
-];
-var options$2 = {
-};
-var dataAsset$2 = {
-	notifies: notifies$2,
-	states: states$2,
-	events: events$2,
-	options: options$2};
-
-let MarieKSequence = class MarieKSequence extends AnimSequence {
-    static animation = 'animation.ss.marie.k';
-    animation = 'animation.ss.marie.k';
-    duration = 15;
-    playingType = AnimPlayingType.Once;
-    override = true;
-    animNotifEvents = dataAsset$2.events;
-    notifies = dataAsset$2.notifies;
-    states = dataAsset$2.states;
-    options = dataAsset$2.options;
-    notifyDamage() {
-    }
-    stateBlockingStart() {
-    }
-    stateBlockingEnd() {
-    }
-};
-MarieKSequence = __decorate([
-    AnimationSequence
-], MarieKSequence);
-
-var notifies$1 = {
-	damage: 0.23
-};
-var states$1 = {
-	combo: [
-		0.2,
-		0.5
-	]
-};
-var events$1 = [
-	{
-		tick: 5,
-		name: "notifyDamage"
 	},
 	{
-		tick: 4,
+		tick: 7,
 		name: "stateComboStart"
 	},
 	{
-		tick: 10,
+		tick: 9,
 		name: "stateComboEnd"
 	}
 ];
-var options$1 = {
+var options$5 = {
 };
-var dataAsset$1 = {
-	notifies: notifies$1,
-	states: states$1,
-	events: events$1,
-	options: options$1};
+var dataAsset$5 = {
+	notifies: notifies$5,
+	states: states$5,
+	events: events$5,
+	options: options$5};
 
 const tags = Tag.fromObject({
     perm: {
@@ -4666,211 +4626,6 @@ const tags = Tag.fromObject({
         health: null,
     },
 });
-
-let MariePSequence = class MariePSequence extends AnimSequence {
-    static animation = 'animation.ss.marie.p';
-    animation = 'animation.ss.marie.p';
-    duration = 12;
-    playingType = AnimPlayingType.Once;
-    override = true;
-    animNotifEvents = dataAsset$1.events;
-    notifies = dataAsset$1.notifies;
-    states = dataAsset$1.states;
-    options = dataAsset$1.options;
-    notifyDamage() {
-    }
-    onStart() {
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-    stateComboStart() {
-        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-    stateComboEnd() {
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-    onStopped() {
-        this.stateComboEnd();
-        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-};
-MariePSequence = __decorate([
-    AnimationSequence
-], MariePSequence);
-
-var notifies = {
-	damage: 0.23
-};
-var states = {
-};
-var events = [
-	{
-		tick: 5,
-		name: "notifyDamage"
-	}
-];
-var options = {
-};
-var dataAsset = {
-	notifies: notifies,
-	states: states,
-	events: events,
-	options: options};
-
-let MariePpSequence = class MariePpSequence extends AnimSequence {
-    static animation = 'animation.ss.marie.pp';
-    animation = 'animation.ss.marie.pp';
-    duration = 15;
-    playingType = AnimPlayingType.Once;
-    override = true;
-    animNotifEvents = dataAsset.events;
-    notifies = dataAsset.notifies;
-    states = dataAsset.states;
-    options = dataAsset.options;
-    notifyDamage() {
-    }
-    onStart() {
-        this.getOwner().addTags('skill.slot.attack');
-        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-    onStopped() {
-        this.getOwner().removeTags('skill.slot.attack');
-        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
-    }
-};
-MariePpSequence = __decorate([
-    AnimationSequence
-], MariePpSequence);
-
-function getAnimSeqComp(en) {
-    return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent);
-}
-class AnimationSequenceDisplayComponent extends Component {
-    actionBar;
-    animComp;
-    animMessage;
-    allowTicking = true;
-    constructor(actionBar, animComp) {
-        super();
-        this.actionBar = actionBar;
-        this.animComp = animComp;
-    }
-    start() {
-        const actionBar = this.actor.getComponent(ActionBarComponent);
-        const animComp = this.actor.getComponent(AnimationSequenceComponent);
-        if (!actionBar || !animComp) {
-            this.remove();
-            return;
-        }
-        this.animMessage = actionBar.message.createBlock('ActionBar.AnimSeq', '');
-    }
-    detach() {
-        this.actionBar.message.removeContentById('ActionBar.AnimSeq');
-    }
-    update() {
-        if (this.animMessage) {
-            const anim = this.animComp.animLayers.getPlayingAnimation();
-            this.animMessage.text = '\nAnim: ' + (anim ? AnimSequence.formatAnimSeq(anim) : 'None');
-        }
-    }
-}
-class AnimationSequencePlugin {
-    name = 'animSeq';
-    description = '动画序列插件，用于管理动画';
-    startModule(app) {
-        registerPlayerComponent(AnimationSequenceComponent);
-    }
-    static getAnimSeqComp(id) {
-        return Application.getInst().getActor(id)?.getComponent(AnimationSequenceComponent);
-    }
-    anim_seq_layer(entities, layer = 0) {
-        entities.forEach(entity => {
-            const animComp = getAnimSeqComp(entity);
-            if (animComp) {
-                profiler.info(...animComp.animLayers.getLayer(layer));
-            }
-        });
-    }
-    anim_seq_playing(entities, size = 20) {
-        entities.forEach(entity => {
-            const animComp = getAnimSeqComp(entity);
-            if (animComp) {
-                const animSeq = animComp.getPlayingAnimation();
-                if (!animSeq) {
-                    return;
-                }
-                profiler.info(animSeq);
-            }
-        });
-    }
-    anim_seq_defined(entities) {
-        entities.forEach(entity => {
-            const animComp = getAnimSeqComp(entity);
-            if (animComp) {
-                profiler.info(animComp.getAnimationNames());
-            }
-        });
-    }
-    hud_anim_seq(actors, enable = true, origin, app) {
-        const actor = actors[0];
-        const instigator = app.getActor(origin.sourceEntity.id);
-        if (!instigator) {
-            return profiler.error(`操作者没有绑定 Actor`);
-        }
-        if (!enable) {
-            return instigator.removeComponent(AnimationSequenceDisplayComponent);
-        }
-        const actionBar = instigator.getComponent(ActionBarComponent);
-        const animComp = actor.getComponent(AnimationSequenceComponent);
-        if (!actionBar || !animComp) {
-            return profiler.error(`操作者没有绑定 ActionBar 或被检测对象没有 AnimationSequenceComponent 组件`);
-        }
-        instigator.addComponent(new AnimationSequenceDisplayComponent(actionBar, animComp));
-    }
-}
-__decorate([
-    CustomCommand('查看动画层'),
-    __param(0, Param.Required('entity')),
-    __param(1, Param.Optional('int')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, Object]),
-    __metadata("design:returntype", void 0)
-], AnimationSequencePlugin.prototype, "anim_seq_layer", null);
-__decorate([
-    CustomCommand('查看当前动画'),
-    __param(0, Param.Required('entity')),
-    __param(1, Param.Optional('int')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, Object]),
-    __metadata("design:returntype", void 0)
-], AnimationSequencePlugin.prototype, "anim_seq_playing", null);
-__decorate([
-    CustomCommand('查看动画名称'),
-    __param(0, Param.Required('entity')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array]),
-    __metadata("design:returntype", void 0)
-], AnimationSequencePlugin.prototype, "anim_seq_defined", null);
-__decorate([
-    CustomCommand('添加 Animation Sequence 监控视图到 Action Bar'),
-    __param(0, Param.Required('actor')),
-    __param(1, Param.Required('bool')),
-    __param(2, Param.Origin),
-    __param(3, Param.App),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Array, Object, Object, Object]),
-    __metadata("design:returntype", void 0)
-], AnimationSequencePlugin.prototype, "hud_anim_seq", null);
-var anim;
-(function (anim) {
-    function playSequence(actor, name, base = true) {
-        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.playAnimation(name, base);
-    }
-    anim.playSequence = playSequence;
-    function stopSequence(actor, name) {
-        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.stopAnimation(name);
-    }
-    anim.stopSequence = stopSequence;
-})(anim || (anim = {}));
 
 var TransitionTriggerType;
 (function (TransitionTriggerType) {
@@ -5777,6 +5532,478 @@ class MyController extends RoninPlayerController {
         });
     }
 }
+class BattleAttributes extends AttributesComponent {
+    constructor() {
+        super({
+            blocking: false,
+        });
+    }
+}
+
+let MarieKSequence = class MarieKSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.k';
+    animation = 'animation.ss.marie.k';
+    duration = 15;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$5.events;
+    notifies = dataAsset$5.notifies;
+    states = dataAsset$5.states;
+    options = dataAsset$5.options;
+    notifyDamage() {
+    }
+    stateBlockingStart() {
+        const attrs = this.getOwner()?.getComponent(BattleAttributes);
+        if (attrs) {
+            attrs.set('blocking', true);
+        }
+    }
+    stateBlockingEnd() {
+        const attrs = this.getOwner()?.getComponent(BattleAttributes);
+        if (attrs) {
+            attrs.set('blocking', false);
+        }
+    }
+    stateComboStart() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    stateComboEnd() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStart() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStopped() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+};
+MarieKSequence = __decorate([
+    AnimationSequence
+], MarieKSequence);
+
+var notifies$4 = {
+	damage: 0.3,
+	input_buffer: 0.55
+};
+var states$4 = {
+	combo: [
+		0.5,
+		0.65
+	]
+};
+var events$4 = [
+	{
+		tick: 6,
+		name: "notifyDamage"
+	},
+	{
+		tick: 11,
+		name: "notifyInput_buffer"
+	},
+	{
+		tick: 10,
+		name: "stateComboStart"
+	},
+	{
+		tick: 13,
+		name: "stateComboEnd"
+	}
+];
+var options$4 = {
+};
+var dataAsset$4 = {
+	notifies: notifies$4,
+	states: states$4,
+	events: events$4,
+	options: options$4};
+
+let MarieKkSequence = class MarieKkSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.kk';
+    animation = 'animation.ss.marie.kk';
+    duration = 16;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$4.events;
+    notifies = dataAsset$4.notifies;
+    states = dataAsset$4.states;
+    options = dataAsset$4.options;
+    notifyDamage() {
+    }
+    notifyInput_buffer() {
+    }
+    stateComboStart() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    stateComboEnd() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStart() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStopped() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+};
+MarieKkSequence = __decorate([
+    AnimationSequence
+], MarieKkSequence);
+
+var notifies$3 = {
+	damage: 0.5
+};
+var states$3 = {
+};
+var events$3 = [
+	{
+		tick: 10,
+		name: "notifyDamage"
+	}
+];
+var options$3 = {
+};
+var dataAsset$3 = {
+	notifies: notifies$3,
+	states: states$3,
+	events: events$3,
+	options: options$3};
+
+let MarieKkkSequence = class MarieKkkSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.kkk';
+    animation = 'animation.ss.marie.kkk';
+    duration = 19;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$3.events;
+    notifies = dataAsset$3.notifies;
+    states = dataAsset$3.states;
+    options = dataAsset$3.options;
+    notifyDamage() {
+    }
+};
+MarieKkkSequence = __decorate([
+    AnimationSequence
+], MarieKkkSequence);
+
+var notifies$2 = {
+	damage: 0.23,
+	input_buffer: 0.4
+};
+var states$2 = {
+	combo: [
+		0.3,
+		0.5
+	]
+};
+var events$2 = [
+	{
+		tick: 5,
+		name: "notifyDamage"
+	},
+	{
+		tick: 8,
+		name: "notifyInput_buffer"
+	},
+	{
+		tick: 6,
+		name: "stateComboStart"
+	},
+	{
+		tick: 10,
+		name: "stateComboEnd"
+	}
+];
+var options$2 = {
+};
+var dataAsset$2 = {
+	notifies: notifies$2,
+	states: states$2,
+	events: events$2,
+	options: options$2};
+
+let MariePSequence = class MariePSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.p';
+    animation = 'animation.ss.marie.p';
+    duration = 12;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$2.events;
+    notifies = dataAsset$2.notifies;
+    states = dataAsset$2.states;
+    options = dataAsset$2.options;
+    notifyDamage() {
+    }
+    stateComboStart() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
+    }
+    stateComboEnd() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
+    }
+    onStart() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
+    }
+    onStopped() {
+        this.stateComboEnd();
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
+    }
+};
+MariePSequence = __decorate([
+    AnimationSequence
+], MariePSequence);
+
+var notifies$1 = {
+	damage: 0.25,
+	input_buffer: 0.4
+};
+var states$1 = {
+	combo: [
+		0.3,
+		0.45
+	]
+};
+var events$1 = [
+	{
+		tick: 5,
+		name: "notifyDamage"
+	},
+	{
+		tick: 8,
+		name: "notifyInput_buffer"
+	},
+	{
+		tick: 6,
+		name: "stateComboStart"
+	},
+	{
+		tick: 9,
+		name: "stateComboEnd"
+	}
+];
+var options$1 = {
+};
+var dataAsset$1 = {
+	notifies: notifies$1,
+	states: states$1,
+	events: events$1,
+	options: options$1};
+
+let MariePpSequence = class MariePpSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.pp';
+    animation = 'animation.ss.marie.pp';
+    duration = 15;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset$1.events;
+    notifies = dataAsset$1.notifies;
+    states = dataAsset$1.states;
+    options = dataAsset$1.options;
+    notifyDamage() {
+    }
+    stateComboStart() {
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    stateComboEnd() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStart() {
+        Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+    onStopped() {
+        this.stateComboEnd();
+        Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+    }
+};
+MariePpSequence = __decorate([
+    AnimationSequence
+], MariePpSequence);
+
+var notifies = {
+	damage: 0.3
+};
+var states = {
+};
+var events = [
+	{
+		tick: 6,
+		name: "notifyDamage"
+	}
+];
+var options = {
+};
+var dataAsset = {
+	notifies: notifies,
+	states: states,
+	events: events,
+	options: options};
+
+let MariePpkSequence = class MariePpkSequence extends AnimSequence {
+    static animation = 'animation.ss.marie.ppk';
+    animation = 'animation.ss.marie.ppk';
+    duration = 16;
+    playingType = AnimPlayingType.Once;
+    override = true;
+    animNotifEvents = dataAsset.events;
+    notifies = dataAsset.notifies;
+    states = dataAsset.states;
+    options = dataAsset.options;
+    notifyDamage() {
+    }
+};
+MariePpkSequence = __decorate([
+    AnimationSequence
+], MariePpkSequence);
+
+function getAnimSeqComp(en) {
+    return Application.getInst().getActor(en.id)?.getComponent(AnimationSequenceComponent);
+}
+class AnimationSequenceDisplayComponent extends Component {
+    actionBar;
+    animComp;
+    animMessage;
+    allowTicking = true;
+    constructor(actionBar, animComp) {
+        super();
+        this.actionBar = actionBar;
+        this.animComp = animComp;
+    }
+    start() {
+        const actionBar = this.actor.getComponent(ActionBarComponent);
+        const animComp = this.actor.getComponent(AnimationSequenceComponent);
+        if (!actionBar || !animComp) {
+            this.remove();
+            return;
+        }
+        this.animMessage = actionBar.message.createBlock('ActionBar.AnimSeq', '');
+    }
+    detach() {
+        this.actionBar.message.removeContentById('ActionBar.AnimSeq');
+    }
+    update() {
+        if (this.animMessage) {
+            const anim = this.animComp.animLayers.getPlayingAnimation();
+            this.animMessage.text = '\nAnim: ' + (anim ? AnimSequence.formatAnimSeq(anim) : 'None');
+        }
+    }
+}
+class AnimationSequencePlugin {
+    name = 'animSeq';
+    description = '动画序列插件，用于管理动画';
+    startModule(app) {
+        registerPlayerComponent(AnimationSequenceComponent);
+    }
+    static getAnimSeqComp(id) {
+        return Application.getInst().getActor(id)?.getComponent(AnimationSequenceComponent);
+    }
+    anim_seq_layer(entities, layer = 0) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                profiler.info(...animComp.animLayers.getLayer(layer));
+            }
+        });
+    }
+    anim_seq_playing(entities, size = 20) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                const animSeq = animComp.getPlayingAnimation();
+                if (!animSeq) {
+                    return;
+                }
+                profiler.info(animSeq);
+            }
+        });
+    }
+    anim_seq_defined(entities) {
+        entities.forEach(entity => {
+            const animComp = getAnimSeqComp(entity);
+            if (animComp) {
+                profiler.info(animComp.getAnimationNames());
+            }
+        });
+    }
+    hud_anim_seq(actors, enable = true, origin, app) {
+        const actor = actors[0];
+        const instigator = app.getActor(origin.sourceEntity.id);
+        if (!instigator) {
+            return profiler.error(`操作者没有绑定 Actor`);
+        }
+        if (!enable) {
+            return instigator.removeComponent(AnimationSequenceDisplayComponent);
+        }
+        const actionBar = instigator.getComponent(ActionBarComponent);
+        const animComp = actor.getComponent(AnimationSequenceComponent);
+        if (!actionBar || !animComp) {
+            return profiler.error(`操作者没有绑定 ActionBar 或被检测对象没有 AnimationSequenceComponent 组件`);
+        }
+        instigator.addComponent(new AnimationSequenceDisplayComponent(actionBar, animComp));
+    }
+}
+__decorate([
+    CustomCommand('查看动画层'),
+    __param(0, Param.Required('entity')),
+    __param(1, Param.Optional('int')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_layer", null);
+__decorate([
+    CustomCommand('查看当前动画'),
+    __param(0, Param.Required('entity')),
+    __param(1, Param.Optional('int')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_playing", null);
+__decorate([
+    CustomCommand('查看动画名称'),
+    __param(0, Param.Required('entity')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "anim_seq_defined", null);
+__decorate([
+    CustomCommand('添加 Animation Sequence 监控视图到 Action Bar'),
+    __param(0, Param.Required('actor')),
+    __param(1, Param.Required('bool')),
+    __param(2, Param.Origin),
+    __param(3, Param.App),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array, Object, Object, Object]),
+    __metadata("design:returntype", void 0)
+], AnimationSequencePlugin.prototype, "hud_anim_seq", null);
+var anim;
+(function (anim) {
+    /**
+     * 可以播放非动画序列的动画（Minecraft 原版动画），但不是动画序列的动画无法停止
+     * @param actor
+     * @param name
+     * @param base
+     * @returns
+     */
+    function play(actor, name, base = true) {
+        if (!AnimationSequenceComponent.hasAnimation(name) && Pawn.isPawn(actor)) {
+            actor.entity?.playAnimation(name);
+            return;
+        }
+        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.playAnimation(name, base);
+    }
+    anim.play = play;
+    function stop(actor, name) {
+        return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.stopAnimation(name);
+    }
+    anim.stop = stop;
+})(anim || (anim = {}));
+
+class RoninSwordSystem {
+    name = 'RoninSwordSystem';
+    description = '浪人动作系统的完整插件';
+    startModule(app) {
+        registerPlayerSpawnClass(RoninModPlayer);
+        registerPlayerController(RoninPlayerController);
+        registerPlayerComponent(ActionBarComponent, DeterminationHudComponent, ControlKitComponent);
+        app.loadPlugin(AnimationSequencePlugin, FinateStateMachinePlugin);
+    }
+}
 
 let MarieMoves = class MarieMoves {
     resume() {
@@ -5805,7 +6032,7 @@ let MarieMoves = class MarieMoves {
         ];
     }
     attack1() {
-        onEnter(actor => anim.playSequence(actor, MariePSequence.animation));
+        onEnter(actor => anim.play(actor, MariePSequence.animation));
         return [
             {
                 trigger: TransitionTriggerType.OnTagAdd,
@@ -5819,7 +6046,21 @@ let MarieMoves = class MarieMoves {
         ];
     }
     attack2() {
-        onEnter(actor => anim.playSequence(actor, MariePpSequence.animation));
+        onEnter(actor => anim.play(actor, MariePpSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'ppk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    ppk() {
+        onEnter(actor => anim.play(actor, MariePpkSequence.animation));
         return [
             {
                 trigger: TransitionTriggerType.OnEndOfState,
@@ -5828,7 +6069,35 @@ let MarieMoves = class MarieMoves {
         ];
     }
     kick1() {
-        onEnter(actor => anim.playSequence(actor, MarieKSequence.animation));
+        onEnter(actor => anim.play(actor, MarieKSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'kk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    kk() {
+        onEnter(actor => anim.play(actor, MarieKkSequence.animation));
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'kkk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ];
+    }
+    kkk() {
+        onEnter(actor => anim.play(actor, MarieKkkSequence.animation));
         return [
             {
                 trigger: TransitionTriggerType.OnEndOfState,
@@ -5862,19 +6131,38 @@ __decorate([
     __metadata("design:returntype", Array)
 ], MarieMoves.prototype, "attack2", null);
 __decorate([
+    StateDef(16),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "ppk", null);
+__decorate([
     StateDef(14),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Array)
 ], MarieMoves.prototype, "kick1", null);
+__decorate([
+    StateDef(16),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "kk", null);
+__decorate([
+    StateDef(18),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Array)
+], MarieMoves.prototype, "kkk", null);
 MarieMoves = __decorate([
     StateMachineTemplate('ronin:marie', 'resume')
 ], MarieMoves);
 
 let MyMod = class MyMod extends ModBase {
     start(app) {
-        app.loadPlugin(RoninPlugin, AnimationSequencePlugin, FinateStateMachinePlugin);
+        app.loadPlugin(RoninSwordSystem);
         registerPlayerController(MyController);
+        registerPlayerComponent(BattleAttributes);
     }
 };
 MyMod = __decorate([

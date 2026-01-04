@@ -69,11 +69,11 @@ export interface AttributeEventMapping {
     onCalculated: [ string, any, any ]
 }
 
-export class AttributesComponent extends EventComponent<AttributeEventMapping> {
-    readonly attributes = new Map<string, Attribute>()
+export class AttributesComponent<M extends Record<string, any> = Record<string, any>> extends EventComponent<AttributeEventMapping> {
+    readonly attributes = new Map<keyof M, Attribute>()
 
     constructor(
-        readonly init: Record<string, any> = {}
+        readonly init: M = {} as any
     ) {
         super()
         for (const [ key, value ] of Object.entries(init)) {
@@ -84,11 +84,11 @@ export class AttributesComponent extends EventComponent<AttributeEventMapping> {
         }
     }
 
-    get<T>(key: string) {
-        return this.attributes.get(key)?.value as T
+    get<K extends keyof M>(key: K) {
+        return this.attributes.get(key)?.value as Attribute<M[K]>
     }
 
-    set(key: string, value: any) {
+    set<K extends keyof M>(key: K, value: M[K]) {
         const attr = this.attributes.get(key)
         if (attr) {
             attr.value = value

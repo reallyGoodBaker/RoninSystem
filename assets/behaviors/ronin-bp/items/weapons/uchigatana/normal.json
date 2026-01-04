@@ -1,8 +1,8 @@
 {
-    "format_version": "1.21.90",
+        "format_version": "1.21.90",
     "minecraft:item": {
         "description": {
-            "identifier": "ss:chargeableSword",
+            "identifier": "ss:uchigatana.normal",
             "menu_category": {
                 "category": "equipment",
                 "group": "minecraft:itemGroup.name.sword"
@@ -11,7 +11,10 @@
         "components": {
             "minecraft:allow_off_hand": true,
             "minecraft:hand_equipped": true,
-            "minecraft:icon": "sword",
+            "minecraft:icon": "weapon.uchigatana.normal",
+            "minecraft:display_name": {
+                "value": "普通打刀"
+            },
             "minecraft:use_modifiers": {
                 "movement_modifier": 1,
                 "use_duration": 999999
@@ -19,11 +22,12 @@
             "minecraft:damage": {
                 "value": 0
             },
+            "minecraft:max_stack_size": 1,
+            "minecraft:can_destroy_in_creative": false,
             "ss:chargeable": {
                 "triggerThreshold": 6,
                 "holdThreshold": 12
-            },
-            "minecraft:can_destroy_in_creative": false
+            }
         }
     }
 }

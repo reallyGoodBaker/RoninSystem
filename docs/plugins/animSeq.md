@@ -94,5 +94,3 @@
 
 - **扩展与工具:**
   - `tool/parseAnimSeq.ts` 和 `autoImport.ts`（如存在）用于从项目资源文件解析/导入动画定义，可用于批量注册动画类或从 JSON 定义生成 `AnimSequence` 子类。
-
-**参考文件:** `animPlugin.ts`, `anim.ts`, `sequence.ts`, `tool/parseAnimSeq.ts`

@@ -7,6 +7,8 @@ import { EventSignal } from "@ronin/core/architect/event"
 /**
  * 若要拓展此类，请继承 RoninModPlayer
  * 并复写 setupInput() 方法，但一定要调用 super.setupInput()
+ * 
+ * 如果只是需要监听输入事件，请直接获取 RoninPlayerController
  */
 export class RoninPlayerController extends PlayerController {
     readonly inputComponent = new InputComponent()

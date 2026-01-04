@@ -22,6 +22,9 @@
 		},
 		"control.mental.down": {
 			"textures": "textures/control/mental_down"
+		},
+		"weapon.uchigatana.normal": {
+			"textures": "textures/items/normal_uchigatana"
 		}
 	}
 }

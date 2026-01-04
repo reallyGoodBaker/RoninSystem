@@ -11,6 +11,7 @@ import { Component } from '@ronin/core/architect/component'
 import { ActionBarComponent } from '@ronin/hud/screenDisplay'
 import { MessageBlock } from '@ronin/hud/messageBlock'
 import { AnimSequence } from './sequence'
+import { Pawn } from '@ronin/core/architect/pawn'
 
 
 function getAnimSeqComp(en: Entity) {
@@ -135,11 +136,23 @@ export class AnimationSequencePlugin implements IPlugin {
 }
 
 export namespace anim {
-    export function playSequence(actor: Actor, name: string, base = true) {
+    /**
+     * 可以播放非动画序列的动画（Minecraft 原版动画），但不是动画序列的动画无法停止
+     * @param actor 
+     * @param name 
+     * @param base 
+     * @returns 
+     */
+    export function play(actor: Actor, name: string, base = true) {
+        if (!AnimationSequenceComponent.hasAnimation(name) && Pawn.isPawn(actor)) {
+            actor.entity?.playAnimation(name)
+            return
+        }
+
         return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.playAnimation(name, base)
     }
 
-    export function stopSequence(actor: Actor, name: string) {
+    export function stop(actor: Actor, name: string) {
         return AnimationSequencePlugin.getAnimSeqComp(actor.id)?.stopAnimation(name)
     }
 }

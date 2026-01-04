@@ -1,7 +1,11 @@
 import { MarieKSequence } from "@/generated/ss/marieK"
+import { MarieKkSequence } from "@/generated/ss/marieKk"
+import { MarieKkkSequence } from "@/generated/ss/marieKkk"
 import { MariePSequence } from "@/generated/ss/marieP"
 import { MariePpSequence } from "@/generated/ss/mariePp"
+import { MariePpkSequence } from "@/generated/ss/mariePpk"
 import { tags } from "@ronin/config/tags"
+import { profiler } from "@ronin/core/profiler"
 import { anim } from "@ronin/plugins/animSeq/animPlugin"
 import { onEnter, StateDef, StateMachineTemplate } from "@ronin/plugins/fsm/setup"
 import { StateTransition, TransitionTriggerType } from "@ronin/plugins/fsm/state"
@@ -40,7 +44,7 @@ export class MarieMoves {
 
     @StateDef(12)
     attack1(): StateTransition[] {
-        onEnter(actor => anim.playSequence(actor, MariePSequence.animation))
+        onEnter(actor => anim.play(actor, MariePSequence.animation))
 
         return [
             {
@@ -57,7 +61,24 @@ export class MarieMoves {
 
     @StateDef(15)
     attack2(): StateTransition[] {
-        onEnter(actor => anim.playSequence(actor, MariePpSequence.animation))
+        onEnter(actor => anim.play(actor, MariePpSequence.animation))
+
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'ppk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ]
+    }
+
+    @StateDef(16)
+    ppk(): StateTransition[] {
+        onEnter(actor => anim.play(actor, MariePpkSequence.animation))
 
         return [
             {
@@ -69,7 +90,41 @@ export class MarieMoves {
 
     @StateDef(14)
     kick1(): StateTransition[] {
-        onEnter(actor => anim.playSequence(actor, MarieKSequence.animation))
+        onEnter(actor => anim.play(actor, MarieKSequence.animation))
+
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'kk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ]
+    }
+
+    @StateDef(16)
+    kk(): StateTransition[] {
+        onEnter(actor => anim.play(actor, MarieKkSequence.animation))
+
+        return [
+            {
+                trigger: TransitionTriggerType.OnTagAdd,
+                nextState: 'kkk',
+                tag: tags.skill.slot.special
+            },
+            {
+                trigger: TransitionTriggerType.OnEndOfState,
+                nextState: 'idle',
+            },
+        ]
+    }
+
+    @StateDef(18)
+    kkk(): StateTransition[] {
+        onEnter(actor => anim.play(actor, MarieKkkSequence.animation))
 
         return [
             {

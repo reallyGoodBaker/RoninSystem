@@ -57,6 +57,9 @@ export abstract class PlayerController extends Actor implements IController {
         return this.pawn as T
     }
 
+    /**
+     * 会在玩家控制器 `start` 执行前调用
+     */
     abstract setupInput(): void
 }
 

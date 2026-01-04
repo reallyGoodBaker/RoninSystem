@@ -2,6 +2,9 @@ import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/anim
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
 import dataAsset from './marieK.json'
 import { PlayAnimationOptions } from '@minecraft/server'
+import { BattleAttributes } from '@/controller'
+import { Tag } from '@ronin/core/tag'
+import { tags } from '@ronin/config/tags'
 
 @AnimationSequence
 export class MarieKSequence extends AnimSequence {
@@ -21,10 +24,32 @@ export class MarieKSequence extends AnimSequence {
     }
 
     protected stateBlockingStart() {
-
+        const attrs = this.getOwner()?.getComponent(BattleAttributes)
+        if (attrs) {
+            attrs.set('blocking', true)
+        }
     }
 
     protected stateBlockingEnd() {
+        const attrs = this.getOwner()?.getComponent(BattleAttributes)
+        if (attrs) {
+            attrs.set('blocking', false)
+        }
+    }
 
+    protected stateComboStart() {
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
+    }
+    
+    protected stateComboEnd() {
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
+    }
+
+    onStart(): void {
+        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
+    }
+
+    onStopped(): void {
+        Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
     }
 }

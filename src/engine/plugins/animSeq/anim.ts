@@ -124,6 +124,10 @@ export class AnimationSequenceComponent extends Component {
 
     static readonly animSeqRegistry = new Map<string, AnimSequenceCtor>()
 
+    static hasAnimation(animName: string) {
+        return AnimationSequenceComponent.animSeqRegistry.has(animName)
+    }
+
     update() {
         this.animLayers.update()
     }

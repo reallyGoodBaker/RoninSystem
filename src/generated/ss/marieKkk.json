@@ -1,0 +1,14 @@
+{
+    "notifies": {
+        "damage": 0.5
+    },
+    "states": {},
+    "events": [
+        {
+            "tick": 10,
+            "name": "notifyDamage"
+        }
+    ],
+    "options": {},
+    "dataAsset": "marieKkk.ts"
+}

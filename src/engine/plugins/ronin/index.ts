@@ -5,6 +5,9 @@ import { DeterminationHudComponent } from "@ronin/plugins/ronin/determination"
 import { ActionBarComponent } from "@ronin/hud/screenDisplay"
 import { RoninModPlayer } from "./player"
 import { RoninPlayerController } from "./roninController"
+import { IApplication } from "@ronin/core/architect/application"
+import { AnimationSequencePlugin } from "../animSeq/animPlugin"
+import { FinateStateMachinePlugin } from "../fsm/plugin"
 
 export class RoninPlugin implements IPlugin {
     name = 'RoninBase'
@@ -23,6 +26,32 @@ export class RoninPlugin implements IPlugin {
             ActionBarComponent,
             DeterminationHudComponent,
             ControlKitComponent,
+        )
+    }
+}
+
+export class RoninSwordSystem implements IPlugin {
+    name = 'RoninSwordSystem'
+    description = '浪人动作系统的完整插件'
+
+    startModule(app: IApplication): void {
+        registerPlayerSpawnClass(
+            RoninModPlayer
+        )
+
+        registerPlayerController(
+            RoninPlayerController
+        )
+
+        registerPlayerComponent(
+            ActionBarComponent,
+            DeterminationHudComponent,
+            ControlKitComponent,
+        )
+
+        app.loadPlugin(
+            AnimationSequencePlugin,
+            FinateStateMachinePlugin,
         )
     }
 }

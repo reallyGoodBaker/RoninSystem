@@ -3,6 +3,7 @@ import { RoninModPlayer } from "@ronin/plugins/ronin/player"
 import { tags } from "@ronin/config/tags"
 import { Tag } from "@ronin/core/tag"
 import { FinateStateMachineComponent } from "@ronin/plugins/fsm/plugin"
+import { AttributesComponent } from "@ronin/gameplay/attribute"
 
 export class MyController extends RoninPlayerController {
     setupInput(): void {
@@ -39,6 +40,14 @@ export class MyController extends RoninPlayerController {
             if (Tag.hasTag(player, attackPermTag) && stateMachineComp?.stateMachine) {
                 Tag.addTag(player, tags.skill.slot.special)
             }
+        })
+    }
+}
+
+export class BattleAttributes extends AttributesComponent<{blocking: boolean}> {
+    constructor() {
+        super({
+            blocking: false,
         })
     }
 }
