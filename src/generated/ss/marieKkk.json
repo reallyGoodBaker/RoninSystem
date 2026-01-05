@@ -1,8 +1,17 @@
 {
-    "notifies": {
-        "damage": 0.5
+    "animMeta": {
+        "animation": {
+            "name": "animation.ss.marie.kkk",
+            "override": true,
+            "duration": 0.9583,
+            "playingType": 0
+        },
+        "notifies": {
+            "damage": 0.5
+        },
+        "states": {},
+        "options": {}
     },
-    "states": {},
     "events": [
         {
             "tick": 10,

@@ -1,8 +1,17 @@
 {
-    "notifies": {
-        "damage": 0.3
+    "animMeta": {
+        "animation": {
+            "name": "animation.ss.marie.ppk",
+            "override": true,
+            "duration": 0.8333,
+            "playingType": 0
+        },
+        "notifies": {
+            "damage": 0.3
+        },
+        "states": {},
+        "options": {}
     },
-    "states": {},
     "events": [
         {
             "tick": 6,

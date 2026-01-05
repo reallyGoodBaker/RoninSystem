@@ -14,8 +14,8 @@ export class MarieKkkSequence extends AnimSequence {
     readonly playingType: AnimPlayingType = AnimPlayingType.Once
     readonly override = true
     readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
-    readonly notifies: Record<string, number> = dataAsset.notifies
-    readonly states: Record<string, number[]> = dataAsset.states
+    readonly notifies: Record<string, number> = dataAsset.animMeta.notifies
+    readonly states: Record<string, number[]> = dataAsset.animMeta.states
     readonly options: PlayAnimationOptions = dataAsset.options
 
 
@@ -30,4 +30,6 @@ export class MarieKkkSequence extends AnimSequence {
     onEnd(): void {
         input.movement(this.getOwner()!, true)
     }
+
+    // AUTO APPEND, DO NOT REMOVE THIS LINE
 }

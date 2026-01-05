@@ -1,13 +1,22 @@
 {
-    "notifies": {
-        "damage": 0.23,
-        "input_buffer": 0.4
-    },
-    "states": {
-        "combo": [
-            0.3,
-            0.5
-        ]
+    "animMeta": {
+        "animation": {
+            "name": "animation.ss.marie.p",
+            "override": true,
+            "duration": 0.6458,
+            "playingType": 0
+        },
+        "notifies": {
+            "damage": 0.23,
+            "input_buffer": 0.4
+        },
+        "states": {
+            "combo": [
+                0.3,
+                0.5
+            ]
+        },
+        "options": {}
     },
     "events": [
         {

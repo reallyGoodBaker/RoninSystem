@@ -1,13 +1,22 @@
 {
-    "notifies": {
-        "damage": 0.3,
-        "input_buffer": 0.55
-    },
-    "states": {
-        "combo": [
-            0.5,
-            0.65
-        ]
+    "animMeta": {
+        "animation": {
+            "name": "animation.ss.marie.kk",
+            "override": true,
+            "duration": 0.8333,
+            "playingType": 0
+        },
+        "notifies": {
+            "damage": 0.3,
+            "input_buffer": 0.55
+        },
+        "states": {
+            "combo": [
+                0.5,
+                0.65
+            ]
+        },
+        "options": {}
     },
     "events": [
         {

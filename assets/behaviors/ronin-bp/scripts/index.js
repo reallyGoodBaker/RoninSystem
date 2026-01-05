@@ -4612,20 +4612,21 @@ function AnimationSequence(cls) {
     AnimationSequenceComponent.animSeqRegistry.set(cls.animation, cls);
 }
 
-var notifies$5 = {
-	input_buffer: 0.4,
-	damage: 0.3
-};
-var states$5 = {
-	blocking: [
-		0.1,
-		0.2
-	],
-	combo: [
-		0.35,
-		0.45
-	]
-};
+var animMeta$5 = {
+	notifies: {
+		input_buffer: 0.4,
+		damage: 0.3
+	},
+	states: {
+		blocking: [
+			0.1,
+			0.2
+		],
+		combo: [
+			0.35,
+			0.45
+		]
+	}};
 var events$5 = [
 	{
 		tick: 8,
@@ -4655,8 +4656,7 @@ var events$5 = [
 var options$5 = {
 };
 var dataAsset$5 = {
-	notifies: notifies$5,
-	states: states$5,
+	animMeta: animMeta$5,
 	events: events$5,
 	options: options$5};
 
@@ -5611,8 +5611,8 @@ let MarieKSequence = class MarieKSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$5.events;
-    notifies = dataAsset$5.notifies;
-    states = dataAsset$5.states;
+    notifies = dataAsset$5.animMeta.notifies;
+    states = dataAsset$5.animMeta.states;
     options = dataAsset$5.options;
     notifyDamage() {
     }
@@ -5647,16 +5647,17 @@ MarieKSequence = __decorate([
     AnimationSequence
 ], MarieKSequence);
 
-var notifies$4 = {
-	damage: 0.3,
-	input_buffer: 0.55
-};
-var states$4 = {
-	combo: [
-		0.5,
-		0.65
-	]
-};
+var animMeta$4 = {
+	notifies: {
+		damage: 0.3,
+		input_buffer: 0.55
+	},
+	states: {
+		combo: [
+			0.5,
+			0.65
+		]
+	}};
 var events$4 = [
 	{
 		tick: 6,
@@ -5678,8 +5679,7 @@ var events$4 = [
 var options$4 = {
 };
 var dataAsset$4 = {
-	notifies: notifies$4,
-	states: states$4,
+	animMeta: animMeta$4,
 	events: events$4,
 	options: options$4};
 
@@ -5690,8 +5690,8 @@ let MarieKkSequence = class MarieKkSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$4.events;
-    notifies = dataAsset$4.notifies;
-    states = dataAsset$4.states;
+    notifies = dataAsset$4.animMeta.notifies;
+    states = dataAsset$4.animMeta.states;
     options = dataAsset$4.options;
     notifyDamage() {
     }
@@ -5716,11 +5716,12 @@ MarieKkSequence = __decorate([
     AnimationSequence
 ], MarieKkSequence);
 
-var notifies$3 = {
-	damage: 0.5
-};
-var states$3 = {
-};
+var animMeta$3 = {
+	notifies: {
+		damage: 0.5
+	},
+	states: {
+	}};
 var events$3 = [
 	{
 		tick: 10,
@@ -5730,8 +5731,7 @@ var events$3 = [
 var options$3 = {
 };
 var dataAsset$3 = {
-	notifies: notifies$3,
-	states: states$3,
+	animMeta: animMeta$3,
 	events: events$3,
 	options: options$3};
 
@@ -5742,8 +5742,8 @@ let MarieKkkSequence = class MarieKkkSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$3.events;
-    notifies = dataAsset$3.notifies;
-    states = dataAsset$3.states;
+    notifies = dataAsset$3.animMeta.notifies;
+    states = dataAsset$3.animMeta.states;
     options = dataAsset$3.options;
     notifyDamage() {
     }
@@ -5758,16 +5758,17 @@ MarieKkkSequence = __decorate([
     AnimationSequence
 ], MarieKkkSequence);
 
-var notifies$2 = {
-	damage: 0.23,
-	input_buffer: 0.4
-};
-var states$2 = {
-	combo: [
-		0.3,
-		0.5
-	]
-};
+var animMeta$2 = {
+	notifies: {
+		damage: 0.23,
+		input_buffer: 0.4
+	},
+	states: {
+		combo: [
+			0.3,
+			0.5
+		]
+	}};
 var events$2 = [
 	{
 		tick: 5,
@@ -5789,8 +5790,7 @@ var events$2 = [
 var options$2 = {
 };
 var dataAsset$2 = {
-	notifies: notifies$2,
-	states: states$2,
+	animMeta: animMeta$2,
 	events: events$2,
 	options: options$2};
 
@@ -5801,8 +5801,8 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$2.events;
-    notifies = dataAsset$2.notifies;
-    states = dataAsset$2.states;
+    notifies = dataAsset$2.animMeta.notifies;
+    states = dataAsset$2.animMeta.states;
     options = dataAsset$2.options;
     notifyDamage() {
     }
@@ -5826,16 +5826,17 @@ MariePSequence = __decorate([
     AnimationSequence
 ], MariePSequence);
 
-var notifies$1 = {
-	damage: 0.25,
-	input_buffer: 0.4
-};
-var states$1 = {
-	combo: [
-		0.3,
-		0.45
-	]
-};
+var animMeta$1 = {
+	notifies: {
+		damage: 0.25,
+		input_buffer: 0.4
+	},
+	states: {
+		combo: [
+			0.3,
+			0.45
+		]
+	}};
 var events$1 = [
 	{
 		tick: 5,
@@ -5857,8 +5858,7 @@ var events$1 = [
 var options$1 = {
 };
 var dataAsset$1 = {
-	notifies: notifies$1,
-	states: states$1,
+	animMeta: animMeta$1,
 	events: events$1,
 	options: options$1};
 
@@ -5869,8 +5869,8 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset$1.events;
-    notifies = dataAsset$1.notifies;
-    states = dataAsset$1.states;
+    notifies = dataAsset$1.animMeta.notifies;
+    states = dataAsset$1.animMeta.states;
     options = dataAsset$1.options;
     notifyDamage() {
     }
@@ -5894,11 +5894,12 @@ MariePpSequence = __decorate([
     AnimationSequence
 ], MariePpSequence);
 
-var notifies = {
-	damage: 0.3
-};
-var states = {
-};
+var animMeta = {
+	notifies: {
+		damage: 0.3
+	},
+	states: {
+	}};
 var events = [
 	{
 		tick: 6,
@@ -5908,8 +5909,7 @@ var events = [
 var options = {
 };
 var dataAsset = {
-	notifies: notifies,
-	states: states,
+	animMeta: animMeta,
 	events: events,
 	options: options};
 
@@ -5920,8 +5920,8 @@ let MariePpkSequence = class MariePpkSequence extends AnimSequence {
     playingType = AnimPlayingType.Once;
     override = true;
     animNotifEvents = dataAsset.events;
-    notifies = dataAsset.notifies;
-    states = dataAsset.states;
+    notifies = dataAsset.animMeta.notifies;
+    states = dataAsset.animMeta.states;
     options = dataAsset.options;
     notifyDamage() {
     }

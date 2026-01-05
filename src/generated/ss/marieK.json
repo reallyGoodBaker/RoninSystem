@@ -1,17 +1,26 @@
 {
-    "notifies": {
-        "input_buffer": 0.4,
-        "damage": 0.3
-    },
-    "states": {
-        "blocking": [
-            0.1,
-            0.2
-        ],
-        "combo": [
-            0.35,
-            0.45
-        ]
+    "animMeta": {
+        "animation": {
+            "name": "animation.ss.marie.k",
+            "override": true,
+            "duration": 0.75,
+            "playingType": 0
+        },
+        "notifies": {
+            "input_buffer": 0.4,
+            "damage": 0.3
+        },
+        "states": {
+            "blocking": [
+                0.1,
+                0.2
+            ],
+            "combo": [
+                0.35,
+                0.45
+            ]
+        },
+        "options": {}
     },
     "events": [
         {

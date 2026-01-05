@@ -128,11 +128,13 @@ export class ${className}Sequence extends AnimSequence {
     readonly playingType: AnimPlayingType = AnimPlayingType.${AnimPlayingType[animMeta.playingType]}
     readonly override = ${animMeta.override}
     readonly animNotifEvents: AnimSeqEvent[] = dataAsset.events
-    readonly notifies: Record<string, number> = dataAsset.notifies
-    readonly states: Record<string, number[]> = dataAsset.states
+    readonly notifies: Record<string, number> = dataAsset.animMeta.notifies
+    readonly states: Record<string, number[]> = dataAsset.animMeta.states
     readonly options: PlayAnimationOptions = dataAsset.options
 
 ${animSeqData.events.map(methodCode).join('\n')}
+
+    // AUTO APPEND, DO NOT REMOVE THIS LINE
 }
 `
     return {
@@ -224,7 +226,7 @@ function writeCode(folder: string, fileName: string, code: string, data: AnimSeq
 
     const codePath = filePath + '.ts'
     if (fs.existsSync(codePath)) {
-        code = hotfixCode(code, data)
+        code = hotfixCode(fs.readFileSync(codePath).toString(), data)
     }
     fs.writeFileSync(codePath, code)
 
