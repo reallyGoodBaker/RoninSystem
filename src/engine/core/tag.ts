@@ -145,7 +145,7 @@ export class Tag {
     static addTag(taggable: Taggable, tag: string | Tag): void {
         const tagObj = Tag.of(tag)
 
-        if (tagObj.isValid) {
+        if (tagObj.isValid && !Tag.hasTagAny(taggable, [ tagObj ])) {
             taggable.addTag(tagObj.tag)
             taggable.OnTagChange.trigger(TagEventType.Add, tagObj)
         }

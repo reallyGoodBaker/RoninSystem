@@ -32,13 +32,11 @@ export class MariePpSequence extends AnimSequence {
     }
 
     onStart(): void {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
         input.movement(this.getOwner()!, false)
     }
 
     onEnd(): void {
         this.stateComboEnd()
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
         input.movement(this.getOwner()!, true)
     }
 

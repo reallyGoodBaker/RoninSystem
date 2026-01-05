@@ -47,12 +47,10 @@ export class MarieKSequence extends AnimSequence {
     }
 
     onStart(): void {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
         input.movement(this.getOwner()!, false)
     }
 
     onEnd(): void {
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
         input.movement(this.getOwner()!, true)
     }
 

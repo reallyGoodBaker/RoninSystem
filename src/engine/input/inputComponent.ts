@@ -63,6 +63,11 @@ export interface InputEventMapping {
     Movement: [ Vector2, number ]
 }
 
+export interface InputBuffer {
+    input: Exclude<keyof InputMapping, 'Movement'> | null
+    ticks: number
+} 
+
 export class InputComponent extends EventComponent<InputEventMapping, PlayerController> {
     static readonly canUsePlayerSwing = Boolean(world.afterEvents.playerSwingStart)
 
@@ -187,9 +192,13 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
         return this.actor.getPawn<Pawn>()
     }
 
+    actorId?: string
+
     start(): void {
         if (this.bindActor?.entity) {
-            InputComponent.inputStacks.set(this.bindActor.entity.id, [])
+            const id = this.bindActor.entity.id
+            InputComponent.inputStacks.set(id, [])
+            this.actorId = id
         }
     }
 
@@ -284,7 +293,7 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
         if (!stack) {
             return
         }
-
+        
         for (const { button, value, ticks } of stack) {
             // 更新输入状态
             const localInput = this.inputMapping[button]
@@ -297,6 +306,7 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
         }
 
         stack.length = 0
+        this._handleInputBuffer()
     }
 
     getInputVector() {
@@ -326,6 +336,40 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
     isMovingForward() {
         return this.getInputVector().y > 0.5
     }
+
+    protected readonly buffer: InputBuffer = {
+        input: null,
+        ticks: 0,
+    }
+
+    bufferInput(key: keyof Omit<InputMapping, 'Movement'>, ticks=6) {
+        this.buffer.input = key
+        this.buffer.ticks = ticks
+    }
+
+    getBufferedInput() {
+        if (this.buffer.ticks > 0) {
+            return this.buffer.input
+        }
+
+        return null
+    }
+
+    useBufferedInput() {
+        if (this.actorId) {
+            const key = this.getBufferedInput()
+            if (key) {
+                InputComponent.performPressing(this.actorId, key, true)
+            }
+        }
+    }
+
+    private _handleInputBuffer() {
+        const last = this.buffer.ticks--
+        if (last < 1) {
+            this.buffer.input = null
+        }
+    }
 }
 
 export namespace input {
@@ -334,6 +378,10 @@ export namespace input {
         if (bindEntity?.isValid && bindEntity.typeId === 'minecraft:player') {
             return <Player> bindEntity
         }
+    }
+
+    function getInput(pawn: Pawn) {
+        return pawn.getController().getComponent(InputComponent)
     }
 
     export function lateralMovement(pawn: Pawn, enabled=true) {
@@ -389,5 +437,13 @@ export namespace input {
     export function dismount(pawn: Pawn, enabled=true) {
         getBindPlayer(pawn)?.inputPermissions
             .setPermissionCategory(InputPermissionCategory.Dismount, enabled)
+    }
+
+    export function inputBuffer(pawn: Pawn, key: Exclude<keyof InputMapping, 'Movement'>, ticks=6) {
+        getInput(pawn)?.bufferInput(key, ticks)
+    }
+
+    export function useBufferedInput(pawn: Pawn) {
+        getInput(pawn)?.useBufferedInput()
     }
 }

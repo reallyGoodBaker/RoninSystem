@@ -18,13 +18,13 @@ export class AnimLayers {
      * 播放动画序列
      */
     async playAnimation(animSeq: AnimSequence, base = true) {
-        const layer = base ? this.layers.base : this.layers.override
-        layer.add(animSeq)
-
         if (!base) {
             this.layers.base.forEach(seq => seq.stop())
         }
-        
+
+        const layer = base ? this.layers.base : this.layers.override
+        layer.add(animSeq)
+
         const { promise, resolve } = Promise.withResolvers<boolean>()
         const onFinish = (canceled: boolean) => {
             resolve(canceled)

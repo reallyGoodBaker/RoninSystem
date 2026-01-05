@@ -68,11 +68,10 @@ export abstract class AnimSequence {
         this.ticksPlayed = 0
         this.isPlaying = true
 
-        const pawn = <Pawn >this.layers.animComp.actor
+        const pawn = <Pawn> this.layers.animComp.actor
         this._animOwner = pawn
-        pawn.entity?.playAnimation(this.animation, this.options)
-
         this.onStart(layers)
+        pawn.entity?.playAnimation(this.animation, this.options)
     }
 
     stop() {

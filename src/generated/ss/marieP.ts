@@ -5,6 +5,7 @@ import { tags } from '@ronin/config/tags'
 import { Tag } from '@ronin/core/tag'
 import { PlayAnimationOptions } from '@minecraft/server'
 import { input } from '@ronin/input/inputComponent'
+import { profiler } from '@ronin/core/profiler'
 
 @AnimationSequence
 export class MariePSequence extends AnimSequence {
@@ -32,13 +33,11 @@ export class MariePSequence extends AnimSequence {
     }
 
     onStart(): void {
-        Tag.removeTag(this.getOwner()!, tags.perm.input.attack.normal)
         input.movement(this.getOwner()!, false)
     }
 
     onEnd(): void {
         this.stateComboEnd()
-        Tag.addTag(this.getOwner()!, tags.perm.input.attack.normal)
         input.movement(this.getOwner()!, true)
     }
 

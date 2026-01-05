@@ -261,7 +261,7 @@ function hotfixCode(code: string, data: AnimSeqData) {
     for (const { name } of events) {
         if (!code.includes(name)) {
             code = code.replace(
-                /\/\/ AUTO APPEND, DO NOT REMOVE THIS LINE[\s|\S]*/g,
+                /^\s*\/\/ AUTO APPEND, DO NOT REMOVE THIS LINE\s*/g,
                 methodCode({ name } as any) + `\n    // AUTO APPEND, DO NOT REMOVE THIS LINE`
             )
         }
