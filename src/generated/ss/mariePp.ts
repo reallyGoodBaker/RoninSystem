@@ -40,5 +40,9 @@ export class MariePpSequence extends AnimSequence {
         input.movement(this.getOwner()!, true)
     }
 
+    protected notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner()!)
+    }
+
     // AUTO APPEND, DO NOT REMOVE THIS LINE
 }

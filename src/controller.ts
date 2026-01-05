@@ -2,7 +2,6 @@ import { RoninPlayerController } from "@ronin/plugins/ronin/roninController"
 import { RoninModPlayer } from "@ronin/plugins/ronin/player"
 import { tags } from "@ronin/config/tags"
 import { Tag } from "@ronin/core/tag"
-import { FinateStateMachineComponent } from "@ronin/plugins/fsm/plugin"
 import { AttributesComponent } from "@ronin/gameplay/attribute"
 import { input } from "@ronin/input/inputComponent"
 

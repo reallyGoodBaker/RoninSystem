@@ -4892,6 +4892,9 @@ let MarieKSequence = class MarieKSequence extends AnimSequence {
     onEnd() {
         input.movement(this.getOwner(), true);
     }
+    notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner());
+    }
 };
 MarieKSequence = __decorate([
     AnimationSequence
@@ -4946,6 +4949,7 @@ let MarieKkSequence = class MarieKkSequence extends AnimSequence {
     notifyDamage() {
     }
     notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner());
     }
     stateComboStart() {
         Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
@@ -5067,6 +5071,9 @@ let MariePSequence = class MariePSequence extends AnimSequence {
         this.stateComboEnd();
         input.movement(this.getOwner(), true);
     }
+    notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner());
+    }
 };
 MariePSequence = __decorate([
     AnimationSequence
@@ -5132,6 +5139,9 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     onEnd() {
         this.stateComboEnd();
         input.movement(this.getOwner(), true);
+    }
+    notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner());
     }
 };
 MariePpSequence = __decorate([

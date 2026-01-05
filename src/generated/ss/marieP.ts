@@ -1,11 +1,10 @@
 import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/animSeq/sequence'
-import { AnimationSequence, AnimLayers } from '@ronin/plugins/animSeq/anim'
+import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
 import dataAsset from './marieP.json'
 import { tags } from '@ronin/config/tags'
 import { Tag } from '@ronin/core/tag'
 import { PlayAnimationOptions } from '@minecraft/server'
 import { input } from '@ronin/input/inputComponent'
-import { profiler } from '@ronin/core/profiler'
 
 @AnimationSequence
 export class MariePSequence extends AnimSequence {
@@ -39,6 +38,10 @@ export class MariePSequence extends AnimSequence {
     onEnd(): void {
         this.stateComboEnd()
         input.movement(this.getOwner()!, true)
+    }
+
+    protected notifyInput_buffer() {
+        input.useBufferedInput(this.getOwner()!)
     }
 
     // AUTO APPEND, DO NOT REMOVE THIS LINE

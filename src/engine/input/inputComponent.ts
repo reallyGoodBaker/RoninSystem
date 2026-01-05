@@ -2,6 +2,7 @@ import { world, InputButton, ButtonState, Vector2, system, Player, EquipmentSlot
 import { PlayerController } from '@ronin/core/architect/controller'
 import { EventComponent } from '@ronin/core/architect/event'
 import { Pawn } from '@ronin/core/architect/pawn'
+import { profiler } from '@ronin/core/profiler'
 
 export interface InputMapping {
     Jump: boolean

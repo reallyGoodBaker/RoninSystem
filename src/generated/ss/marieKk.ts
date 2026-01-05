@@ -24,7 +24,7 @@ export class MarieKkSequence extends AnimSequence {
     }
 
     protected notifyInput_buffer() {
-        
+        input.useBufferedInput(this.getOwner()!)
     }
 
     protected stateComboStart() {

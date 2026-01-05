@@ -2,7 +2,41 @@ import path from "path"
 import { resourcePath, RealRoot } from "../../../utils/tool/conf"
 import { walk } from "../../../utils/tool/file"
 import fs from 'fs'
-import { PlayAnimationOptions } from "@minecraft/server"
+
+export interface PlayAnimationOptions {
+    /**
+     * @remarks
+     * Amount of time to fade out after an animation stops.
+     *
+     */
+    blendOutTime?: number
+    /**
+     * @remarks
+     * Specifies a controller to use that has been defined on the
+     * entity.
+     *
+     */
+    controller?: string
+    /**
+     * @remarks
+     * Specifies the state to transition to.
+     *
+     */
+    nextState?: string
+    /**
+     * @remarks
+     * A list of players the animation will be visible to.
+     *
+     */
+    players?: any[]
+    /**
+     * @remarks
+     * Specifies a Molang expression for when this animation should
+     * complete.
+     *
+     */
+    stopExpression?: string
+}
 
 export enum AnimPlayingType {
     Once = 0,
@@ -261,13 +295,13 @@ function hotfixCode(code: string, data: AnimSeqData) {
     for (const { name } of events) {
         if (!code.includes(name)) {
             code = code.replace(
-                /^\s*\/\/ AUTO APPEND, DO NOT REMOVE THIS LINE\s*/g,
-                methodCode({ name } as any) + `\n    // AUTO APPEND, DO NOT REMOVE THIS LINE`
+                /\s*\/\/ AUTO APPEND, DO NOT REMOVE THIS LINE\s*/g,
+                `\n${methodCode({ name } as any)}\n\n    // AUTO APPEND, DO NOT REMOVE THIS LINE\n`
             )
         }
     }
 
-    return code.replace(/^\s*readonly duration = .*\s/g, `    readonly duration = ${Math.floor(duration * 20)}`)
-        .replace(/^\s*readonly override = .*\s/g, `    readonly override = ${override}`)
-        .replace(/^\s*readonly playingType = .*\s/g, `    readonly playingType = AnimPlayingType.${AnimPlayingType[playingType]}`)
+    return code.replace(/\s*readonly duration = .*\s/g, `\n    readonly duration = ${Math.floor(duration * 20)}`)
+        .replace(/\s*readonly override = .*\s/g, `\n    readonly override = ${override}`)
+        .replace(/\s*readonly playingType = .*\s/g, `\n    readonly playingType = AnimPlayingType.${AnimPlayingType[playingType]}`)
 }
