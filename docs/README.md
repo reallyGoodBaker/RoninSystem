@@ -1,30 +1,3 @@
-**RoninSystem Docs**
-
-This directory contains developer-facing documentation generated from `src/engine/core` and `src/engine/core/architect`.
-
-Quick navigation
-
-- **Core documentation**: `docs/core/` — low-level engine modules (ticking, tags, command registry, profiler, etc.). See `docs/core/README.md` for details.
-- **Architect documentation**: `docs/architect/` — Actor/Component framework, Application, SpawnConfig, Plugins, World integration.
-
-Files (high level)
-
-- `docs/core/`:
-  - `types.md` — common types (`ConstructorOf`)
-  - `ticking.md` — tick scheduling and `Tickable` system
-  - `tag.md` — Tag system and `TaggableObject`
-  - `store.md` — placeholder (source file empty)
-  - `profiler.md` — debug/format/printing helpers
-  - `predefined.md` — base Pawn / Controller implementations
-  - `command.md` — command registration helper (`CommandRegistry`)
-
-- `docs/architect/`:
-  - See `docs/architect/README.md` for a full index of the Actor/Component framework docs.
-
-How to use
-
-- Browse the `docs/core` and `docs/architect` directories for API docs and examples.
-- If you want these pages committed, I can create a git commit for you.
 # RoninSystem 文档中心
 
 欢迎来到 RoninSystem 文档中心。RoninSystem 是一个专为 Minecraft Bedrock 脚本 API 设计的高性能游戏框架，采用 TypeScript 编写，提供现代、类型安全的开发体验。
