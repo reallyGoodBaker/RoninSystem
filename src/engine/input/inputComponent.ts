@@ -1,4 +1,4 @@
-import { world, InputButton, ButtonState, Vector2, system, Player, EquipmentSlot, HeldItemOption } from '@minecraft/server'
+import { world, InputButton, ButtonState, Vector2, system, Player, EquipmentSlot, HeldItemOption, InputPermissionCategory } from '@minecraft/server'
 import { PlayerController } from '@ronin/core/architect/controller'
 import { EventComponent } from '@ronin/core/architect/event'
 import { Pawn } from '@ronin/core/architect/pawn'
@@ -325,5 +325,69 @@ export class InputComponent extends EventComponent<InputEventMapping, PlayerCont
 
     isMovingForward() {
         return this.getInputVector().y > 0.5
+    }
+}
+
+export namespace input {
+    function getBindPlayer(pawn: Pawn) {
+        const bindEntity = pawn.entity
+        if (bindEntity?.isValid && bindEntity.typeId === 'minecraft:player') {
+            return <Player> bindEntity
+        }
+    }
+
+    export function lateralMovement(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.LateralMovement, enabled)
+    }
+
+    export function moveForward(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveForward, enabled)
+    }
+
+    export function moveBackward(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveBackward, enabled)
+    }
+
+    export function moveLeft(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveLeft, enabled)
+    }
+
+    export function moveRight(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveRight, enabled)
+    }
+
+    export function camera(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Camera, enabled)
+    }
+
+    export function jump(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Jump, enabled)
+    }
+
+    export function sneak(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Sneak, enabled)
+    }
+
+    export function movement(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Movement, enabled)
+    }
+
+    export function mount(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Mount, enabled)
+    }
+
+    export function dismount(pawn: Pawn, enabled=true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Dismount, enabled)
     }
 }

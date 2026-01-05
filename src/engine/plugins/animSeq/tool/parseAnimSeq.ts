@@ -66,8 +66,7 @@ interface AnimSeqEvent {
 }
 
 interface AnimSeqData {
-    notifies: Record<string, number>
-    states: Record<string, [number, number]>
+    animMeta: AnimSeqMeta
     events: AnimSeqEvent[]
     options: PlayAnimationOptions
 }
@@ -75,8 +74,7 @@ interface AnimSeqData {
 function getAnimSeqData(animSeq: AnimSeqMeta) {
     const { notifies, states } = animSeq
     const animSeqData: AnimSeqData = {
-        notifies: animSeq.notifies,
-        states: animSeq.states,
+        animMeta: animSeq,
         events: [],
         options: {},
     }
@@ -223,10 +221,13 @@ function writeCode(folder: string, fileName: string, code: string, data: AnimSeq
     if (!fs.existsSync(filePath)) {
         fs.mkdirSync(path.dirname(filePath), { recursive: true })
     }
+
     const codePath = filePath + '.ts'
-    if (!fs.existsSync(codePath)) {
-        fs.writeFileSync(codePath, code)
+    if (fs.existsSync(codePath)) {
+        code = hotfixCode(code, data)
     }
+    fs.writeFileSync(codePath, code)
+
     const editorData = <any> data
     editorData.dataAsset = fileName + '.ts'
     fs.writeFileSync(filePath + '.json', JSON.stringify(editorData, null, 4))
@@ -250,4 +251,21 @@ export function generateCode() {
         const { folder, fileName, code, data } = animSeqCode(meta)
         writeCode(folder, fileName, code, data, exportPath)
     }
+}
+
+
+function hotfixCode(code: string, data: AnimSeqData) {
+    const { events, animMeta: { animation: { duration, override, playingType } } } = data
+    for (const { name } of events) {
+        if (!code.includes(name)) {
+            code = code.replace(
+                /\/\/ AUTO APPEND, DO NOT REMOVE THIS LINE[\s|\S]*/g,
+                methodCode({ name } as any) + `\n    // AUTO APPEND, DO NOT REMOVE THIS LINE`
+            )
+        }
+    }
+
+    return code.replace(/^\s*readonly duration = .*\s/g, `    readonly duration = ${Math.floor(duration * 20)}`)
+        .replace(/^\s*readonly override = .*\s/g, `    readonly override = ${override}`)
+        .replace(/^\s*readonly playingType = .*\s/g, `    readonly playingType = AnimPlayingType.${AnimPlayingType[playingType]}`)
 }

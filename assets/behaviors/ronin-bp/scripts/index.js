@@ -1,4 +1,4 @@
-import { CustomCommandParamType, CustomCommandStatus, CommandPermissionLevel, system, world, GameMode, EntityEquippableComponent, EntityInventoryComponent, InputButton, ButtonState, HeldItemOption, EquipmentSlot, EntityHealthComponent } from '@minecraft/server';
+import { CustomCommandParamType, CustomCommandStatus, CommandPermissionLevel, system, world, GameMode, EntityEquippableComponent, EntityInventoryComponent, InputButton, ButtonState, HeldItemOption, EquipmentSlot, InputPermissionCategory, EntityHealthComponent } from '@minecraft/server';
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -3420,6 +3420,70 @@ class InputComponent extends EventComponent {
         return this.getInputVector().y > 0.5;
     }
 }
+var input;
+(function (input) {
+    function getBindPlayer(pawn) {
+        const bindEntity = pawn.entity;
+        if (bindEntity?.isValid && bindEntity.typeId === 'minecraft:player') {
+            return bindEntity;
+        }
+    }
+    function lateralMovement(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.LateralMovement, enabled);
+    }
+    input.lateralMovement = lateralMovement;
+    function moveForward(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveForward, enabled);
+    }
+    input.moveForward = moveForward;
+    function moveBackward(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveBackward, enabled);
+    }
+    input.moveBackward = moveBackward;
+    function moveLeft(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveLeft, enabled);
+    }
+    input.moveLeft = moveLeft;
+    function moveRight(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.MoveRight, enabled);
+    }
+    input.moveRight = moveRight;
+    function camera(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Camera, enabled);
+    }
+    input.camera = camera;
+    function jump(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Jump, enabled);
+    }
+    input.jump = jump;
+    function sneak(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Sneak, enabled);
+    }
+    input.sneak = sneak;
+    function movement(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Movement, enabled);
+    }
+    input.movement = movement;
+    function mount(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Mount, enabled);
+    }
+    input.mount = mount;
+    function dismount(pawn, enabled = true) {
+        getBindPlayer(pawn)?.inputPermissions
+            .setPermissionCategory(InputPermissionCategory.Dismount, enabled);
+    }
+    input.dismount = dismount;
+})(input || (input = {}));
 
 class BasePlayer extends Pawn {
     /**
@@ -5572,9 +5636,11 @@ let MarieKSequence = class MarieKSequence extends AnimSequence {
     }
     onStart() {
         Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), false);
     }
-    onStopped() {
+    onEnd() {
         Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), true);
     }
 };
 MarieKSequence = __decorate([
@@ -5639,9 +5705,11 @@ let MarieKkSequence = class MarieKkSequence extends AnimSequence {
     }
     onStart() {
         Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), false);
     }
-    onStopped() {
+    onEnd() {
         Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), true);
     }
 };
 MarieKkSequence = __decorate([
@@ -5678,6 +5746,12 @@ let MarieKkkSequence = class MarieKkkSequence extends AnimSequence {
     states = dataAsset$3.states;
     options = dataAsset$3.options;
     notifyDamage() {
+    }
+    onStart() {
+        input.movement(this.getOwner(), false);
+    }
+    onEnd() {
+        input.movement(this.getOwner(), true);
     }
 };
 MarieKkkSequence = __decorate([
@@ -5740,10 +5814,12 @@ let MariePSequence = class MariePSequence extends AnimSequence {
     }
     onStart() {
         Tag.removeTag(this.getOwner(), tags.perm.input.attack.normal);
+        input.movement(this.getOwner(), false);
     }
-    onStopped() {
+    onEnd() {
         this.stateComboEnd();
         Tag.addTag(this.getOwner(), tags.perm.input.attack.normal);
+        input.movement(this.getOwner(), true);
     }
 };
 MariePSequence = __decorate([
@@ -5806,10 +5882,12 @@ let MariePpSequence = class MariePpSequence extends AnimSequence {
     }
     onStart() {
         Tag.removeTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), false);
     }
-    onStopped() {
+    onEnd() {
         this.stateComboEnd();
         Tag.addTag(this.getOwner(), tags.perm.input.attack.special);
+        input.movement(this.getOwner(), true);
     }
 };
 MariePpSequence = __decorate([
@@ -5846,6 +5924,12 @@ let MariePpkSequence = class MariePpkSequence extends AnimSequence {
     states = dataAsset.states;
     options = dataAsset.options;
     notifyDamage() {
+    }
+    onStart() {
+        input.movement(this.getOwner(), false);
+    }
+    onEnd() {
+        input.movement(this.getOwner(), true);
     }
 };
 MariePpkSequence = __decorate([

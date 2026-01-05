@@ -2,6 +2,9 @@ import { AnimSequence, AnimPlayingType, AnimSeqEvent } from '@ronin/plugins/anim
 import { AnimationSequence } from '@ronin/plugins/animSeq/anim'
 import { PlayAnimationOptions } from "@minecraft/server"
 import dataAsset from './marieKkk.json'
+import { Tag } from '@ronin/core/tag'
+import { input } from '@ronin/input/inputComponent'
+import { tags } from '@ronin/config/tags'
 
 @AnimationSequence
 export class MarieKkkSequence extends AnimSequence {
@@ -18,5 +21,13 @@ export class MarieKkkSequence extends AnimSequence {
 
     protected notifyDamage() {
 
+    }
+
+    onStart(): void {
+        input.movement(this.getOwner()!, false)
+    }
+
+    onEnd(): void {
+        input.movement(this.getOwner()!, true)
     }
 }

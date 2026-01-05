@@ -44,7 +44,7 @@
                 "initialize": [
                     "v.attack_time = 0;",
                     "v.is_first_person = 0;",
-                    "v.arm_detector = query.bone_aabb('leftArm');",
+                    "v.arm_detector = query.bone_aabb('leftSleeve');",
                     "v.is_slim_arm = v.arm_detector.max.x == 2;",
 
                     "v.is_holding_right = 0.0;",

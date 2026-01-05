@@ -5,6 +5,7 @@ import { PlayAnimationOptions } from '@minecraft/server'
 import { BattleAttributes } from '@/controller'
 import { Tag } from '@ronin/core/tag'
 import { tags } from '@ronin/config/tags'
+import { input } from '@ronin/input/inputComponent'
 
 @AnimationSequence
 export class MarieKSequence extends AnimSequence {
@@ -47,9 +48,11 @@ export class MarieKSequence extends AnimSequence {
 
     onStart(): void {
         Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
+        input.movement(this.getOwner()!, false)
     }
 
-    onStopped(): void {
+    onEnd(): void {
         Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
+        input.movement(this.getOwner()!, true)
     }
 }

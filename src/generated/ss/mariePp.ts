@@ -4,6 +4,7 @@ import dataAsset from './mariePp.json'
 import { Tag } from '@ronin/core/tag'
 import { tags } from '@ronin/config/tags'
 import { PlayAnimationOptions } from '@minecraft/server'
+import { input } from '@ronin/input/inputComponent'
 
 @AnimationSequence
 export class MariePpSequence extends AnimSequence {
@@ -32,10 +33,12 @@ export class MariePpSequence extends AnimSequence {
 
     onStart(): void {
         Tag.removeTag(this.getOwner()!, tags.perm.input.attack.special)
+        input.movement(this.getOwner()!, false)
     }
 
-    onStopped(): void {
+    onEnd(): void {
         this.stateComboEnd()
         Tag.addTag(this.getOwner()!, tags.perm.input.attack.special)
+        input.movement(this.getOwner()!, true)
     }
 }
